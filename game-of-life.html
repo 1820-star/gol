@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GAME OF LIFE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a12; --bg2:#12121e; --card:#1a1a2e; --card2:#1e1e35;
+  --accent:#f7c948; --accent2:#ff6b35; --accent3:#4ecdc4; --accent4:#a855f7;
+  --green:#22c55e; --red:#ef4444; --text:#f0f0ff; --text2:#8888aa;
+  --border:rgba(247,201,72,0.2); --glow:0 0 20px rgba(247,201,72,0.3);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ===== INTRO ===== */
+#intro-screen{position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+.intro-particles{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,#1a0a3e 0%,#000 70%);}
+.star{position:absolute;border-radius:50%;background:white;animation:twinkle 2s infinite alternate;}
+@keyframes twinkle{0%{opacity:.2;transform:scale(1);}100%{opacity:1;transform:scale(1.5);}}
+.intro-logo{position:relative;z-index:2;text-align:center;padding:0 20px;}
+.intro-title{font-family:'Bangers',cursive;font-size:68px;letter-spacing:8px;color:transparent;background:linear-gradient(135deg,#f7c948,#ff6b35,#a855f7);-webkit-background-clip:text;background-clip:text;animation:titlePop .8s cubic-bezier(.34,1.56,.64,1) forwards;opacity:0;transform:scale(.3) rotate(-10deg);filter:drop-shadow(0 0 30px rgba(247,201,72,.8));}
+@keyframes titlePop{to{opacity:1;transform:scale(1) rotate(0deg);}}
+.intro-subtitle{font-size:13px;letter-spacing:6px;color:var(--accent3);text-transform:uppercase;opacity:0;animation:fadeUp .6s 1s forwards;font-weight:700;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.intro-tagline{font-size:15px;color:var(--text2);margin-top:12px;opacity:0;animation:fadeUp .6s 1.4s forwards;}
+.intro-btn{margin-top:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;border:none;padding:18px 48px;border-radius:50px;font-family:'Bangers',cursive;font-size:22px;letter-spacing:3px;cursor:pointer;opacity:0;animation:fadeUp .6s 1.8s forwards;box-shadow:0 0 40px rgba(247,201,72,.5);transition:transform .2s;position:relative;overflow:hidden;}
+.intro-btn:active{transform:scale(.95);}
+.intro-floating-icon{position:absolute;font-size:36px;animation:floatAround 6s infinite ease-in-out;opacity:.6;}
+@keyframes floatAround{0%,100%{transform:translateY(0) rotate(0deg);}25%{transform:translateY(-20px) rotate(5deg);}75%{transform:translateY(10px) rotate(-5deg);}}
+
+/* ===== SETUP ===== */
+#setup-screen{position:fixed;inset:0;z-index:1000;background:var(--bg);display:none;flex-direction:column;overflow-y:auto;}
+.setup-header{padding:20px 20px 10px;text-align:center;position:sticky;top:0;background:var(--bg);z-index:10;border-bottom:1px solid var(--border);}
+.setup-title{font-family:'Bangers',cursive;font-size:32px;color:var(--accent);letter-spacing:3px;}
+.setup-step{font-size:12px;color:var(--text2);letter-spacing:2px;margin-top:4px;}
+.setup-progress{display:flex;gap:6px;justify-content:center;margin:12px 0 0;}
+.prog-dot{width:8px;height:8px;border-radius:50%;background:var(--card2);transition:all .3s;}
+.prog-dot.active{background:var(--accent);width:24px;border-radius:4px;}
+.prog-dot.done{background:var(--green);}
+.setup-content{padding:16px 20px 32px;flex:1;}
+.setup-section{display:none;}
+.setup-section.active{display:block;}
+.setup-label{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;}
+.setup-input{width:100%;background:var(--card2);border:2px solid var(--border);color:var(--text);padding:14px 16px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;outline:none;margin-bottom:16px;transition:border-color .3s;}
+.setup-input:focus{border-color:var(--accent);}
+.option-btn{background:var(--card2);border:2px solid var(--border);color:var(--text);padding:12px 8px;border-radius:12px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;transition:all .2s;width:100%;}
+.option-btn.selected{border-color:var(--accent);background:rgba(247,201,72,.15);color:var(--accent);}
+.option-btn:active{transform:scale(.95);}
+.option-icon{font-size:24px;margin-bottom:4px;display:block;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px;}
+.setup-btn{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;border:none;padding:16px;border-radius:16px;font-family:'Bangers',cursive;font-size:20px;letter-spacing:2px;cursor:pointer;margin-top:8px;transition:transform .2s;}
+.setup-btn:active{transform:scale(.97);}
+
+/* Goal cards */
+.goal-card{background:var(--card2);border:2px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;transition:all .2s;}
+.goal-card.selected{border-color:var(--accent4);background:rgba(168,85,247,.15);}
+.goal-icon{font-size:28px;margin-bottom:6px;}
+.goal-name{font-size:12px;font-weight:800;line-height:1.3;}
+
+/* Size slider visual */
+.size-slider-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+.size-track{flex:1;height:8px;background:var(--card2);border-radius:4px;position:relative;cursor:pointer;}
+.size-fill{height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:4px;transition:width .3s;}
+.size-thumb{position:absolute;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:left .3s;}
+
+/* ===== TOP BAR ===== */
+#main-app{display:none;flex-direction:column;min-height:100vh;padding-bottom:80px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;background:rgba(10,10,18,.97);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);}
+.player-name{font-family:'Bangers',cursive;font-size:20px;color:var(--accent);letter-spacing:2px;}
+.level-badge{background:linear-gradient(135deg,var(--accent4),#6366f1);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;letter-spacing:1px;cursor:pointer;transition:transform .2s;}
+.level-badge:active{transform:scale(.95);}
+.xp-bar-container{height:4px;background:var(--card2);}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .5s ease;}
+
+/* ===== SCENE ===== */
+.home-scene{position:relative;margin:12px 16px;height:320px;background:linear-gradient(180deg,#07111f 0%,#0f1e3a 35%,#1a3050 60%,#0f2218 100%);border-radius:24px;overflow:hidden;border:2px solid var(--border);}
+.scene-sky{position:absolute;top:0;left:0;right:0;height:58%;}
+.cloud{position:absolute;background:rgba(255,255,255,.07);border-radius:30px;animation:driftCloud 22s linear infinite;}
+@keyframes driftCloud{from{transform:translateX(-120px);}to{transform:translateX(calc(100vw + 120px));}}
+.scene-ground{position:absolute;bottom:0;left:0;right:0;height:42%;background:linear-gradient(180deg,#1a3a22 0%,#0f2218 100%);}
+.ground-grass{position:absolute;top:0;left:0;right:0;height:10px;background:linear-gradient(90deg,#22c55e,#16a34a,#22c55e);}
+.scene-road{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:70px;height:90px;background:#15152a;clip-path:polygon(20% 0%,80% 0%,100% 100%,0% 100%);}
+
+.scene-house{position:absolute;bottom:37%;left:8%;cursor:pointer;transition:transform .2s;filter:drop-shadow(0 4px 14px rgba(0,0,0,.6));}
+.scene-house:active{transform:scale(.9);}
+.scene-vehicle{position:absolute;bottom:37%;right:5%;cursor:pointer;transition:transform .2s;filter:drop-shadow(0 4px 14px rgba(0,0,0,.6));}
+.scene-vehicle:active{transform:scale(.9);}
+.scene-avatar{position:absolute;bottom:37%;left:50%;transform:translateX(-50%);cursor:pointer;transition:transform .2s;z-index:10;}
+.scene-avatar:active{transform:translateX(-50%) scale(.92);}
+
+/* SPEECH BUBBLE - bigger and readable */
+.speech-bubble{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fffdf0;color:#111;padding:10px 14px;border-radius:14px;font-size:12px;font-weight:700;min-width:160px;max-width:220px;text-align:center;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:30;display:none;border:2px solid var(--accent);}
+.speech-bubble::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:9px solid transparent;border-top-color:#fffdf0;}
+.speech-bubble.visible{display:block;animation:bubblePop .3s cubic-bezier(.34,1.56,.64,1);}
+@keyframes bubblePop{from{opacity:0;transform:translateX(-50%) scale(.5);}to{opacity:1;transform:translateX(-50%) scale(1);}}
+
+.scene-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:1px;color:var(--accent);white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,.8);}
+
+/* Tap info tooltip */
+.tap-info{position:absolute;background:rgba(10,10,18,.95);border:1px solid var(--accent);border-radius:12px;padding:8px 12px;font-size:11px;font-weight:700;color:var(--text);z-index:25;pointer-events:none;max-width:140px;text-align:center;line-height:1.4;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+/* Lock overlay */
+.lock-overlay{position:absolute;inset:0;background:rgba(0,0,0,.65);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+.lock-icon{font-size:24px;}
+.lock-text{font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px;text-align:center;}
+
+/* ===== STEPS ===== */
+.steps-section{margin:0 16px 12px;}
+.section-title{font-family:'Bangers',cursive;font-size:20px;color:var(--accent);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.steps-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;}
+.steps-row::-webkit-scrollbar{display:none;}
+.step-bubble{flex-shrink:0;width:70px;height:56px;border-radius:14px;background:var(--card2);border:2px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .2s;padding:4px;}
+.step-bubble.active{border-color:var(--accent);background:rgba(247,201,72,.1);box-shadow:var(--glow);}
+.step-bubble:active{transform:scale(.9);}
+.step-icon{font-size:18px;}
+.step-short{font-size:9px;font-weight:800;color:var(--text2);text-align:center;line-height:1.2;overflow:hidden;max-width:60px;white-space:nowrap;text-overflow:ellipsis;}
+.step-bubble.active .step-short{color:var(--accent);}
+
+/* ===== TASK PANEL ===== */
+.next-steps-panel{margin:0 16px 12px;background:var(--card);border-radius:20px;border:1px solid var(--border);overflow:hidden;}
+.panel-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.panel-title{font-family:'Bangers',cursive;font-size:17px;letter-spacing:2px;color:var(--accent);}
+.panel-badge{background:var(--accent);color:#000;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;}
+.task-list{padding:4px 0;}
+.task-item{padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .2s;}
+.task-item:last-child{border-bottom:none;}
+.task-item:active{background:rgba(255,255,255,.03);}
+.task-check{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;transition:all .2s;}
+.task-check.done{background:var(--green);border-color:var(--green);}
+.task-info{flex:1;min-width:0;}
+.task-name{font-size:13px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.task-name.done{text-decoration:line-through;color:var(--text2);}
+.task-meta{font-size:10px;color:var(--text2);margin-top:2px;display:flex;gap:6px;align-items:center;}
+.task-dept{padding:1px 5px;border-radius:5px;font-size:9px;font-weight:700;}
+.dept-house{background:rgba(78,205,196,.2);color:var(--accent3);}
+.dept-car{background:rgba(255,107,53,.2);color:var(--accent2);}
+.dept-person{background:rgba(168,85,247,.2);color:var(--accent4);}
+.dept-skill{background:rgba(247,201,72,.2);color:var(--accent);}
+.task-priority{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.priority-high{background:var(--red);}
+.priority-med{background:var(--accent);}
+.priority-low{background:var(--green);}
+.task-skip-btn{font-size:16px;opacity:.5;cursor:pointer;padding:4px;flex-shrink:0;}
+
+/* ===== NAV ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,18,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:200;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px;cursor:pointer;transition:all .2s;background:none;border:none;color:var(--text2);}
+.nav-btn.active{color:var(--accent);}
+.nav-btn:active{transform:scale(.9);}
+.nav-icon{font-size:20px;}
+.nav-label{font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:500;display:none;align-items:flex-end;}
+.modal-overlay.open{display:flex;}
+.modal-sheet{width:100%;background:var(--bg2);border-radius:28px 28px 0 0;border-top:1px solid var(--border);padding:0 0 max(24px,env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;animation:slideUp .35s cubic-bezier(.34,1.2,.64,1);}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-handle{width:40px;height:4px;background:var(--text2);border-radius:2px;margin:12px auto;opacity:.4;}
+.modal-header{padding:0 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.modal-title{font-family:'Bangers',cursive;font-size:24px;letter-spacing:2px;}
+.modal-close{width:34px;height:34px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.modal-body{padding:14px 18px;}
+.add-task-form{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;padding:14px;background:var(--card);border-radius:16px;border:1px solid var(--border);}
+.form-input{background:var(--card2);border:2px solid var(--border);color:var(--text);padding:11px 13px;border-radius:11px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;outline:none;width:100%;transition:border-color .3s;}
+.form-input:focus{border-color:var(--accent);}
+.form-row{display:flex;gap:8px;}
+.form-select{flex:1;background:var(--card2);border:2px solid var(--border);color:var(--text);padding:10px 11px;border-radius:11px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;outline:none;cursor:pointer;}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;border:none;padding:13px;border-radius:11px;font-family:'Bangers',cursive;font-size:17px;letter-spacing:2px;cursor:pointer;transition:transform .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.add-btn:active{transform:scale(.97);}
+.voice-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent3),#0ea5e9);border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(78,205,196,.4);transition:all .2s;flex-shrink:0;}
+.voice-btn.recording{animation:pulse-record 1s infinite;background:linear-gradient(135deg,var(--red),#f97316);}
+@keyframes pulse-record{0%,100%{box-shadow:0 0 20px rgba(239,68,68,.4);transform:scale(1);}50%{box-shadow:0 0 40px rgba(239,68,68,.8);transform:scale(1.05);}}
+
+/* ===== SKILLS DIAGRAM ===== */
+.skills-diagram{position:relative;width:240px;height:240px;margin:0 auto 20px;}
+.skill-axis{position:absolute;top:50%;left:50%;width:2px;background:var(--border);transform-origin:top center;}
+.skill-polygon{position:absolute;top:0;left:0;width:100%;height:100%;}
+.skill-axis-label{position:absolute;font-size:10px;font-weight:800;color:var(--text2);text-align:center;transform:translate(-50%,-50%);white-space:nowrap;}
+
+/* ===== TROPHIES / LEVEL INDEX ===== */
+.trophy-page-header{padding:16px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.trophy-big-icon{font-size:48px;}
+.level-index-list{padding:12px 0;}
+.level-index-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .2s;}
+.level-index-row.current{background:rgba(247,201,72,.08);}
+.level-index-row.locked{opacity:.4;}
+.level-rank-icon{font-size:24px;width:36px;text-align:center;}
+.level-rank-info{flex:1;}
+.level-rank-name{font-family:'Bangers',cursive;font-size:17px;letter-spacing:1px;}
+.level-rank-xp{font-size:10px;color:var(--text2);font-weight:700;}
+.level-rank-badge{font-size:11px;font-weight:800;padding:3px 10px;border-radius:10px;}
+.badge-current{background:rgba(247,201,72,.2);color:var(--accent);}
+.badge-locked{background:rgba(255,255,255,.05);color:var(--text2);}
+.badge-done{background:rgba(34,197,94,.2);color:var(--green);}
+
+.achievement-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 18px;}
+.ach-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;}
+.ach-card.earned{border-color:var(--accent);background:rgba(247,201,72,.06);}
+.ach-icon{font-size:28px;margin-bottom:6px;}
+.ach-name{font-size:9px;font-weight:800;color:var(--text2);line-height:1.3;}
+.ach-card.earned .ach-name{color:var(--accent);}
+.ach-xp{font-size:9px;color:var(--green);margin-top:3px;font-weight:700;}
+
+/* ===== VEHICLES GARAGE ===== */
+.garage-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.vehicle-card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;}
+.vehicle-card.active-vehicle{border-color:var(--accent);box-shadow:0 0 16px rgba(247,201,72,.2);}
+.vehicle-card:active{transform:scale(.98);}
+.vehicle-card-row{display:flex;align-items:center;gap:12px;}
+.vehicle-icon-big{font-size:44px;flex-shrink:0;}
+.vehicle-info{flex:1;}
+.vehicle-name{font-family:'Bangers',cursive;font-size:18px;letter-spacing:1px;}
+.vehicle-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.vehicle-active-badge{position:absolute;top:10px;right:10px;background:var(--accent);color:#000;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;}
+.vehicle-locked-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+.add-vehicle-btn{background:var(--card2);border:2px dashed var(--border);border-radius:18px;padding:18px;text-align:center;cursor:pointer;transition:all .2s;color:var(--text2);font-size:13px;font-weight:700;}
+.add-vehicle-btn:active{transform:scale(.97);border-color:var(--accent);color:var(--accent);}
+
+/* ===== HOUSE GALLERY ===== */
+.house-card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;}
+.house-card.active-house{border-color:var(--accent3);box-shadow:0 0 16px rgba(78,205,196,.2);}
+.house-card-row{display:flex;align-items:center;gap:12px;}
+.house-icon-big{font-size:44px;flex-shrink:0;}
+.house-locked-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+
+/* ===== AI SUGGESTION ===== */
+.ai-suggestion{background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(99,102,241,.12));border:1px solid rgba(168,85,247,.3);border-radius:16px;padding:12px 14px;margin:0 16px 12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;}
+.ai-dot{width:7px;height:7px;border-radius:50%;background:var(--accent4);margin-top:5px;flex-shrink:0;animation:aiPulse 2s infinite;}
+@keyframes aiPulse{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.3);}}
+.ai-text{font-size:12px;font-weight:700;color:var(--accent4);line-height:1.5;}
+
+/* ===== TABS ===== */
+.tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding:0 16px;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab-btn{flex-shrink:0;padding:7px 14px;border-radius:20px;background:var(--card2);border:1px solid var(--border);color:var(--text2);font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.tab-btn.active{background:rgba(247,201,72,.15);border-color:var(--accent);color:var(--accent);}
+.scroll-section{display:none;}
+.scroll-section.active{display:block;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ===== MISC ===== */
+.empty-state{text-align:center;padding:28px 16px;color:var(--text2);}
+.empty-icon{font-size:40px;margin-bottom:10px;}
+.empty-text{font-size:13px;font-weight:700;}
+.fab{position:fixed;bottom:90px;right:18px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 20px rgba(247,201,72,.4);z-index:150;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.fab:active{transform:scale(.9);}
+.streak-display{display:flex;align-items:center;gap:5px;background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.3);padding:5px 10px;border-radius:20px;}
+.streak-fire{font-size:16px;}
+.streak-count{font-family:'Bangers',cursive;font-size:16px;color:var(--accent2);letter-spacing:1px;}
+.streak-label{font-size:9px;color:var(--text2);font-weight:700;}
+.reminder-badge{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);padding:1px 6px;border-radius:5px;font-size:9px;font-weight:800;}
+.cal-task{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border-radius:12px;margin-bottom:8px;border-left:3px solid var(--accent);}
+.cal-date{font-size:10px;color:var(--accent);font-weight:800;white-space:nowrap;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+.stat-icon{font-size:24px;margin-bottom:6px;}
+.stat-value{font-family:'Bangers',cursive;font-size:26px;color:var(--accent);letter-spacing:2px;line-height:1;}
+.stat-label{font-size:10px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-top:3px;}
+.section-pad{padding:0 16px 16px;}
+
+/* ===== EFFECTS ===== */
+.effect-overlay{position:fixed;inset:0;z-index:9000;pointer-events:none;display:none;}
+.confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:confettiFall 1.5s ease-in forwards;}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+.fire-effect{position:fixed;inset:0;z-index:8999;pointer-events:none;background:linear-gradient(0deg,rgba(255,60,0,.3) 0%,transparent 60%);display:none;animation:fireBurn 1.5s ease-out forwards;}
+@keyframes fireBurn{0%{opacity:.8;}100%{opacity:0;}}
+.streak-text{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Bangers',cursive;font-size:60px;color:var(--accent);text-shadow:0 0 40px var(--accent),0 4px 0 rgba(0,0,0,.5);z-index:9001;pointer-events:none;display:none;animation:streakPop 1.5s ease-out forwards;letter-spacing:4px;}
+@keyframes streakPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3);}30%{opacity:1;transform:translate(-50%,-50%) scale(1.2);}70%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;transform:translate(-50%,-50%) scale(.8) translateY(-40px);}}
+.xp-popup{position:fixed;font-family:'Bangers',cursive;font-size:26px;color:var(--green);z-index:9001;pointer-events:none;text-shadow:0 0 20px var(--green);animation:xpFloat 1.5s ease-out forwards;}
+@keyframes xpFloat{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-80px);}}
+</style>
+</head>
+<body>
+
+<div id="bg-stars" style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;"></div>
+
+<!-- ===== INTRO ===== -->
+<div id="intro-screen">
+  <div class="intro-particles"></div>
+  <div class="intro-floating-icon" style="top:10%;left:10%;animation-delay:0s;">🏆</div>
+  <div class="intro-floating-icon" style="top:15%;right:12%;animation-delay:1s;">⚡</div>
+  <div class="intro-floating-icon" style="bottom:22%;left:8%;animation-delay:2s;">🎯</div>
+  <div class="intro-floating-icon" style="bottom:26%;right:10%;animation-delay:.5s;">🔥</div>
+  <div class="intro-floating-icon" style="top:42%;left:5%;animation-delay:1.5s;">✨</div>
+  <div class="intro-logo">
+    <div class="intro-title">GAME OF LIFE</div>
+    <div class="intro-subtitle">Dein Leben. Dein Spiel.</div>
+    <div class="intro-tagline">Meistere dein echtes Leben — Level für Level</div>
+    <button class="intro-btn" onclick="startSetup()">🚀 JETZT STARTEN</button>
+  </div>
+</div>
+
+<!-- ===== SETUP ===== -->
+<div id="setup-screen">
+  <div class="setup-header">
+    <div class="setup-title">PROFIL ERSTELLEN</div>
+    <div class="setup-step" id="setup-step-label">SCHRITT 1 VON 5</div>
+    <div class="setup-progress">
+      <div class="prog-dot active" id="pd1"></div>
+      <div class="prog-dot" id="pd2"></div>
+      <div class="prog-dot" id="pd3"></div>
+      <div class="prog-dot" id="pd4"></div>
+      <div class="prog-dot" id="pd5"></div>
+    </div>
+  </div>
+
+  <div class="setup-content">
+    <!-- STEP 1: Name -->
+    <div class="setup-section active" id="step1">
+      <div style="text-align:center;font-size:52px;margin-bottom:12px;">👋</div>
+      <div class="setup-label">WIE HEISST DU?</div>
+      <input class="setup-input" id="player-name-input" type="text" placeholder="Dein Name..." maxlength="20">
+      <button class="setup-btn" onclick="goStep(2)">WEITER →</button>
+    </div>
+
+    <!-- STEP 2: Avatar looks -->
+    <div class="setup-section" id="step2">
+      <div style="text-align:center;margin-bottom:16px;" id="avatar-preview-setup"></div>
+      <div class="setup-label">FRISUR</div>
+      <div class="grid-3">
+        <button class="option-btn selected" onclick="selHair('long',this)"><span class="option-icon">🧑‍🦱</span>Lang</button>
+        <button class="option-btn" onclick="selHair('short',this)"><span class="option-icon">👦</span>Kurz</button>
+        <button class="option-btn" onclick="selHair('bald',this)"><span class="option-icon">👨‍🦲</span>Glatze</button>
+      </div>
+      <div class="setup-label">KÖRPERGRÖSSE</div>
+      <div class="grid-3">
+        <button class="option-btn" onclick="selHeight('small',this)"><span class="option-icon">🔽</span>Klein</button>
+        <button class="option-btn selected" onclick="selHeight('medium',this)"><span class="option-icon">↔️</span>Mittel</button>
+        <button class="option-btn" onclick="selHeight('tall',this)"><span class="option-icon">🔼</span>Groß</button>
+      </div>
+      <div class="setup-label">KÖRPERFORM (5 Stufen)</div>
+      <div style="background:var(--card);border-radius:14px;padding:14px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);font-weight:700;margin-bottom:10px;">
+          <span>😤 Sehr schlank</span><span id="body-label">Normal</span><span>🍔 Kräftig</span>
+        </div>
+        <input type="range" id="body-slider" min="1" max="5" value="3"
+          style="width:100%;accent-color:var(--accent);" oninput="updateBodySlider(this.value)">
+        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+          <span style="font-size:18px;">🦷</span><span style="font-size:18px;">😐</span><span style="font-size:22px;">😊</span><span style="font-size:24px;">😄</span><span style="font-size:28px;">😁</span>
+        </div>
+        <div style="font-size:11px;color:var(--accent3);margin-top:8px;text-align:center;" id="body-hint">Wird für Ernährungs- & Fitnessvorschläge verwendet</div>
+      </div>
+      <button class="setup-btn" onclick="goStep(3)">WEITER →</button>
+    </div>
+
+    <!-- STEP 3: Vehicle & House -->
+    <div class="setup-section" id="step3">
+      <div class="setup-label">STARTFAHRZEUG</div>
+      <div class="grid-3">
+        <button class="option-btn selected" onclick="selVehicle('sports',this)"><span class="option-icon">🚗</span>Kleinwagen</button>
+        <button class="option-btn" onclick="selVehicle('bus',this)"><span class="option-icon">🚌</span>Van</button>
+        <button class="option-btn" onclick="selVehicle('tractor',this)"><span class="option-icon">🚜</span>Traktor</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:14px;padding:8px 12px;background:rgba(168,85,247,.1);border-radius:10px;border:1px solid rgba(168,85,247,.2);">
+        🔒 Sportwagen & Flugzeug werden ab <strong style="color:var(--accent);">Gold 1</strong> freigeschaltet
+      </div>
+      <div class="setup-label">STARTUNTERKUNFT</div>
+      <div class="grid-3">
+        <button class="option-btn selected" onclick="selHouse('normal',this)"><span class="option-icon">🏠</span>Haus</button>
+        <button class="option-btn" onclick="selHouse('cardboard',this)"><span class="option-icon">📦</span>Karton</button>
+        <button class="option-btn" onclick="selHouse('farm',this)"><span class="option-icon">🏡</span>Farm</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:16px;padding:8px 12px;background:rgba(168,85,247,.1);border-radius:10px;border:1px solid rgba(168,85,247,.2);">
+        🔒 Villa & Penthouse werden ab <strong style="color:var(--accent);">Gold 1</strong> freigeschaltet
+      </div>
+      <button class="setup-btn" onclick="goStep(4)">WEITER →</button>
+    </div>
+
+    <!-- STEP 4: Goals -->
+    <div class="setup-section" id="step4">
+      <div style="text-align:center;font-size:42px;margin-bottom:8px;">🎯</div>
+      <div style="text-align:center;font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.5;">Was willst du in diesem Spiel erreichen?<br><span style="font-size:12px;">Dein AI-Agent passt sich deinen Zielen an</span></div>
+      <div class="setup-label">WÄHLE DEINE ZIELE (mehrere möglich)</div>
+      <div class="grid-3" id="goals-grid">
+        <div class="goal-card" onclick="toggleGoal('fitness',this)"><div class="goal-icon">💪</div><div class="goal-name">Gesünder leben</div></div>
+        <div class="goal-card" onclick="toggleGoal('money',this)"><div class="goal-icon">💰</div><div class="goal-name">Finanzen ordnen</div></div>
+        <div class="goal-card" onclick="toggleGoal('career',this)"><div class="goal-icon">🚀</div><div class="goal-name">Karriere aufbauen</div></div>
+        <div class="goal-card" onclick="toggleGoal('skills',this)"><div class="goal-icon">🌍</div><div class="goal-name">Skills entwickeln</div></div>
+        <div class="goal-card" onclick="toggleGoal('home',this)"><div class="goal-icon">🏠</div><div class="goal-name">Zuhause pflegen</div></div>
+        <div class="goal-card" onclick="toggleGoal('balance',this)"><div class="goal-icon">☯️</div><div class="goal-name">Work-Life-Balance</div></div>
+        <div class="goal-card" onclick="toggleGoal('travel',this)"><div class="goal-icon">✈️</div><div class="goal-name">Reisen & Erleben</div></div>
+        <div class="goal-card" onclick="toggleGoal('social',this)"><div class="goal-icon">👥</div><div class="goal-name">Soziales Leben</div></div>
+        <div class="goal-card" onclick="toggleGoal('creative',this)"><div class="goal-icon">🎨</div><div class="goal-name">Kreativ sein</div></div>
+      </div>
+      <button class="setup-btn" onclick="goStep(5)">WEITER →</button>
+    </div>
+
+    <!-- STEP 5: Done -->
+    <div class="setup-section" id="step5">
+      <div style="text-align:center;font-size:56px;margin-bottom:12px;">🎮</div>
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-family:'Bangers',cursive;font-size:28px;color:var(--accent);letter-spacing:2px;">BEREIT ZUM SPIELEN!</div>
+        <div id="goal-summary" style="font-size:13px;color:var(--accent3);margin-top:8px;line-height:1.6;padding:10px 14px;background:rgba(78,205,196,.08);border-radius:12px;margin-top:12px;"></div>
+      </div>
+      <div style="background:var(--card);border-radius:16px;padding:14px;margin-bottom:14px;border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:10px;">⚡ STARTER TASKS WERDEN ERSTELLT</div>
+        <div id="starter-tasks"></div>
+      </div>
+      <button class="setup-btn" onclick="finishSetup()">🚀 SPIEL STARTEN!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="main-app">
+  <div class="top-bar">
+    <div>
+      <div class="player-name" id="display-name">SPIELER</div>
+      <div style="display:flex;align-items:center;gap:5px;margin-top:2px;">
+        <div class="streak-display">
+          <span class="streak-fire">🔥</span>
+          <span class="streak-count" id="streak-count">0</span>
+          <span class="streak-label">STREAK</span>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div class="level-badge" id="level-display" onclick="openTrophyPage()">⭐ HOLZ 1</div>
+      <div style="font-size:10px;color:var(--text2);margin-top:3px;" id="xp-display">0 XP</div>
+    </div>
+  </div>
+  <div class="xp-bar-container"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
+
+  <!-- PAGES -->
+  <div class="page active" id="page-home">
+    <!-- SCENE -->
+    <div class="home-scene" id="main-scene">
+      <div class="scene-sky">
+        <div class="cloud" style="width:80px;height:22px;top:18%;left:-20%;animation-duration:26s;"></div>
+        <div class="cloud" style="width:50px;height:14px;top:32%;left:-10%;animation-duration:19s;animation-delay:-8s;"></div>
+        <div class="cloud" style="width:110px;height:28px;top:8%;left:-30%;animation-duration:32s;animation-delay:-15s;"></div>
+      </div>
+      <div style="position:absolute;top:10px;right:14px;font-size:13px;opacity:.5;">✨</div>
+      <div style="position:absolute;top:22px;left:18px;font-size:9px;opacity:.35;">★</div>
+      <div class="scene-ground"><div class="ground-grass"></div><div class="scene-road"><div style="position:absolute;left:50%;top:30%;width:4px;height:18px;background:var(--accent);transform:translateX(-50%);border-radius:2px;"></div></div></div>
+
+      <!-- HOUSE -->
+      <div class="scene-house" id="scene-house-obj" onclick="handleSceneTap('house',event)">
+        <svg id="house-svg-main" width="86" height="86" viewBox="0 0 90 90" fill="none"></svg>
+        <div class="scene-label" id="house-scene-label">🏠 HAUS</div>
+      </div>
+
+      <!-- AVATAR -->
+      <div class="scene-avatar" onclick="openDept('person')">
+        <div class="speech-bubble" id="speech-bubble"></div>
+        <svg width="66" height="92" viewBox="0 0 70 95" fill="none" id="avatar-main-svg">
+          <ellipse cx="35" cy="93" rx="18" ry="4" fill="rgba(0,0,0,.3)"/>
+          <rect x="22" y="62" width="12" height="28" rx="4" fill="#1e40af"/>
+          <rect x="36" y="62" width="12" height="28" rx="4" fill="#1e40af"/>
+          <line x1="28" y1="62" x2="28" y2="90" stroke="#1d3a9e" stroke-width="1.5"/>
+          <line x1="42" y1="62" x2="42" y2="90" stroke="#1d3a9e" stroke-width="1.5"/>
+          <ellipse cx="28" cy="91" rx="8" ry="3.5" fill="#1a1a1a"/>
+          <ellipse cx="42" cy="91" rx="8" ry="3.5" fill="#1a1a1a"/>
+          <rect x="18" y="35" width="34" height="30" rx="6" fill="#f0f0f0"/>
+          <rect x="7" y="36" width="12" height="22" rx="5" fill="#f0d0b0"/>
+          <rect x="51" y="36" width="12" height="22" rx="5" fill="#f0d0b0"/>
+          <path d="M26 35 Q35 28 44 35" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+          <rect x="28" y="26" width="14" height="12" rx="5" fill="#f0d0b0"/>
+          <circle cx="35" cy="22" r="18" fill="#f0d0b0"/>
+          <g id="avatar-hair"></g>
+          <circle cx="28" cy="20" r="2.5" fill="#2d1a0e"/>
+          <circle cx="42" cy="20" r="2.5" fill="#2d1a0e"/>
+          <circle cx="29" cy="19" r="1" fill="white"/>
+          <circle cx="43" cy="19" r="1" fill="white"/>
+          <path d="M29 27 Q35 32 41 27" fill="none" stroke="#c0906a" stroke-width="2" stroke-linecap="round"/>
+          <path d="M30 35 L35 42 L40 35" fill="none" stroke="#ddd" stroke-width="1.5"/>
+        </svg>
+        <div class="scene-label" id="avatar-name-label">👤 ICH</div>
+      </div>
+
+      <!-- VEHICLE -->
+      <div class="scene-vehicle" id="scene-vehicle-obj" onclick="handleSceneTap('vehicle',event)">
+        <svg width="96" height="62" viewBox="0 0 100 65" fill="none"><g id="vehicle-graphic"></g></svg>
+        <div class="scene-label" id="vehicle-scene-label">🚗 AUTO</div>
+      </div>
+    </div>
+
+    <!-- STEPS -->
+    <div class="steps-section">
+      <div class="section-title">⚡ NEXT STEPS <span style="font-size:12px;color:var(--text2);font-family:'Nunito',sans-serif;font-weight:700;" id="tasks-done-count"></span></div>
+      <div class="steps-row" id="steps-row"></div>
+    </div>
+
+    <!-- TASK PANEL -->
+    <div class="next-steps-panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 AUFGABEN</div>
+        <div class="panel-badge" id="tasks-count-badge">0</div>
+      </div>
+      <div class="task-list" id="main-task-list">
+        <div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">Füge Tasks hinzu!</div></div>
+      </div>
+    </div>
+
+    <!-- AI -->
+    <div id="ai-suggestion-area" style="display:none;">
+      <div class="ai-suggestion" onclick="addAiSuggestion()">
+        <div class="ai-dot"></div>
+        <div>
+          <div style="font-size:9px;color:var(--text2);font-weight:800;letter-spacing:1px;margin-bottom:3px;">💡 AI VORSCHLAG</div>
+          <div class="ai-text" id="ai-suggestion-text"></div>
+          <div style="font-size:10px;color:var(--accent4);margin-top:5px;font-weight:700;">+ ZU TASKS →</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end home page -->
+
+  <!-- HAUS PAGE -->
+  <div class="page" id="page-house">
+    <div style="padding:16px 16px 10px;">
+      <div style="font-family:'Bangers',cursive;font-size:28px;color:var(--accent3);letter-spacing:3px;">🏠 HAUS</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchHouseTab('tasks',this)">📋 TASKS</button>
+      <button class="tab-btn" onclick="switchHouseTab('gallery',this)">🏘️ GALERIE</button>
+    </div>
+    <div class="section-pad">
+      <div class="scroll-section active" id="house-tasks-tab"></div>
+      <div class="scroll-section" id="house-gallery-tab"></div>
+    </div>
+  </div>
+
+  <!-- VEHICLE PAGE -->
+  <div class="page" id="page-vehicle">
+    <div style="padding:16px 16px 10px;">
+      <div style="font-family:'Bangers',cursive;font-size:28px;color:var(--accent2);letter-spacing:3px;">🚗 GARAGE</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchVehicleTab('tasks',this)">📋 TASKS</button>
+      <button class="tab-btn" onclick="switchVehicleTab('garage',this)">🚘 FAHRZEUGE</button>
+    </div>
+    <div class="section-pad">
+      <div class="scroll-section active" id="vehicle-tasks-tab"></div>
+      <div class="scroll-section" id="vehicle-garage-tab"></div>
+    </div>
+  </div>
+
+  <!-- PERSON PAGE -->
+  <div class="page" id="page-person">
+    <div style="padding:16px 16px 10px;">
+      <div style="font-family:'Bangers',cursive;font-size:28px;color:var(--accent4);letter-spacing:3px;">👤 PERSON</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchPersonTab('tasks',this)">📋 TASKS</button>
+      <button class="tab-btn" onclick="switchPersonTab('skills',this)">🌳 SKILLS</button>
+      <button class="tab-btn" onclick="switchPersonTab('stats',this)">📊 STATS</button>
+    </div>
+    <div class="section-pad">
+      <div class="scroll-section active" id="person-tasks-tab"></div>
+      <div class="scroll-section" id="person-skills-tab"></div>
+      <div class="scroll-section" id="person-stats-tab"></div>
+    </div>
+  </div>
+
+  <!-- KALENDER PAGE -->
+  <div class="page" id="page-calendar">
+    <div style="padding:16px 16px 10px;">
+      <div style="font-family:'Bangers',cursive;font-size:28px;color:var(--accent);letter-spacing:3px;">📅 KALENDER</div>
+    </div>
+    <div class="section-pad" id="calendar-view"></div>
+  </div>
+
+</div><!-- end main-app -->
+
+<!-- NAV -->
+<div class="bottom-nav" id="bottom-nav" style="display:none;">
+  <button class="nav-btn active" id="nav-home" onclick="switchPage('home',this)"><span class="nav-icon">🏠</span><span class="nav-label">HOME</span></button>
+  <button class="nav-btn" id="nav-house" onclick="switchPage('house',this)"><span class="nav-icon">🏡</span><span class="nav-label">HAUS</span></button>
+  <button class="nav-btn" id="nav-vehicle" onclick="switchPage('vehicle',this)"><span class="nav-icon">🚗</span><span class="nav-label">GARAGE</span></button>
+  <button class="nav-btn" id="nav-person" onclick="switchPage('person',this)"><span class="nav-icon">⚡</span><span class="nav-label">PERSON</span></button>
+  <button class="nav-btn" id="nav-calendar" onclick="switchPage('calendar',this)"><span class="nav-icon">📅</span><span class="nav-label">PLAN</span></button>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab-btn" style="display:none;" onclick="openAddTask()">＋</button>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="modal-add-task">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--accent)">✚ TASK</div>
+      <button class="modal-close" onclick="closeModal('modal-add-task')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <button class="voice-btn" id="voice-btn" onclick="toggleVoice()">🎤</button>
+        <div style="flex:1;"><div style="font-size:12px;font-weight:800;color:var(--accent3);">SPRACHBEFEHL</div><div style="font-size:10px;color:var(--text2);" id="voice-status">Drücke und spreche...</div></div>
+      </div>
+      <div class="add-task-form">
+        <input class="form-input" id="new-task-name" type="text" placeholder="Was möchtest du erledigen?">
+        <div class="form-row">
+          <select class="form-select" id="new-task-dept">
+            <option value="home">🏠 Haus</option>
+            <option value="vehicle">🚗 Fahrzeug</option>
+            <option value="person">👤 Person</option>
+            <option value="skill">🌳 Skill</option>
+          </select>
+          <select class="form-select" id="new-task-priority">
+            <option value="high">🔴 Hoch</option>
+            <option value="med" selected>🟡 Mittel</option>
+            <option value="low">🟢 Niedrig</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <select class="form-select" id="new-task-repeat">
+            <option value="none">Einmalig</option>
+            <option value="daily">Täglich</option>
+            <option value="weekly">Wöchentlich</option>
+            <option value="monthly">Monatlich</option>
+          </select>
+          <input class="form-input" id="new-task-date" type="date" style="flex:1;margin:0;padding:10px 11px;font-size:12px;">
+        </div>
+        <button class="add-btn" onclick="addTask()">✚ ERSTELLEN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TASK DETAIL MODAL -->
+<div class="modal-overlay" id="modal-task-detail">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="task-detail-title" style="color:var(--accent);font-size:18px;max-width:80%;"></div>
+      <button class="modal-close" onclick="closeModal('modal-task-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="task-detail-body"></div>
+  </div>
+</div>
+
+<!-- ADD VEHICLE MODAL -->
+<div class="modal-overlay" id="modal-add-vehicle">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--accent2)">🚘 FAHRZEUG</div>
+      <button class="modal-close" onclick="closeModal('modal-add-vehicle')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:14px;">
+        <div class="setup-label">HERSTELLER</div>
+        <input class="form-input" id="v-make" placeholder="z.B. BMW, VW, Audi...">
+        <div class="setup-label">MODELL</div>
+        <input class="form-input" id="v-model" placeholder="z.B. Golf, 3er, A4...">
+        <div class="setup-label">TYP</div>
+        <div class="grid-3" id="v-type-grid" style="margin-bottom:14px;">
+          <button class="option-btn selected" onclick="selVType('car',this)"><span class="option-icon">🚗</span>Auto</button>
+          <button class="option-btn" onclick="selVType('bike',this)"><span class="option-icon">🚲</span>Fahrrad</button>
+          <button class="option-btn" onclick="selVType('moto',this)"><span class="option-icon">🏍️</span>Moped</button>
+        </div>
+        <div id="v-locked-warning" style="display:none;font-size:11px;color:var(--text2);padding:8px 12px;background:rgba(168,85,247,.1);border-radius:10px;border:1px solid rgba(168,85,247,.2);margin-bottom:10px;">🔒 Sportwagen & Flugzeug erst ab <strong style="color:var(--accent);">Gold 1</strong></div>
+        <button class="add-btn" onclick="addVehicle()" style="width:100%;">✚ HINZUFÜGEN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TROPHY PAGE MODAL -->
+<div class="modal-overlay" id="modal-trophies">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--accent)">🏆 TROPHÄEN & LEVEL</div>
+      <button class="modal-close" onclick="closeModal('modal-trophies')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div class="tabs" style="padding:14px 14px 0;">
+        <button class="tab-btn active" onclick="switchTrophyTab('levels',this)">⭐ LEVEL INDEX</button>
+        <button class="tab-btn" onclick="switchTrophyTab('achievements',this)">🏆 ERRUNGEN.</button>
+        <button class="tab-btn" onclick="switchTrophyTab('xp',this)">⚡ XP VERLAUF</button>
+      </div>
+      <div style="padding:0;">
+        <div class="scroll-section active" id="trophy-levels-tab"><div class="level-index-list" id="level-index-list"></div></div>
+        <div class="scroll-section" id="trophy-achievements-tab"><div class="achievement-grid" id="achievement-grid-full"></div></div>
+        <div class="scroll-section" id="trophy-xp-tab"><div style="padding:16px;" id="xp-stats-view"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EFFECTS -->
+<div class="effect-overlay" id="effect-overlay"></div>
+<div class="fire-effect" id="fire-effect"></div>
+<div class="streak-text" id="streak-text">🔥 STREAK!</div>
+
+<script>
+// ===== STATE =====
+let state = {
+  playerName:'',hairStyle:'long',bodySize:3,heightType:'medium',
+  vehicleType:'car',houseType:'normal',
+  xp:0,streak:0,tasksToday:0,lastDate:null,
+  tasks:[],taskId:1,
+  vehicles:[],activeVehicleId:0,
+  goals:[],
+  achievements:[],
+  xpHistory:[],
+  currentPage:'home'
+};
+
+let setupStep=1, selVTypeVal='car', completedCount=0, voiceActive=false;
+let selectedGoals=[];
+let tapInfoTimer=null;
+
+// ===== LEVELS =====
+const LEVELS=[
+  {name:'Holz 1',icon:'🪵',min:0,max:100,color:'#8B4513'},
+  {name:'Holz 2',icon:'🪵',min:100,max:250,color:'#8B4513'},
+  {name:'Holz 3',icon:'🪵',min:250,max:450,color:'#8B4513'},
+  {name:'Holz 4',icon:'🪵',min:450,max:700,color:'#8B4513'},
+  {name:'Holz 5',icon:'🪵',min:700,max:1000,color:'#8B4513'},
+  {name:'Bronze 1',icon:'🥉',min:1000,max:1400,color:'#cd7f32'},
+  {name:'Bronze 2',icon:'🥉',min:1400,max:1900,color:'#cd7f32'},
+  {name:'Bronze 3',icon:'🥉',min:1900,max:2500,color:'#cd7f32'},
+  {name:'Silber 1',icon:'🥈',min:2500,max:3200,color:'#C0C0C0'},
+  {name:'Silber 2',icon:'🥈',min:3200,max:4000,color:'#C0C0C0'},
+  {name:'Gold 1',icon:'🥇',min:4000,max:5000,color:'#FFD700'},
+  {name:'Gold 2',icon:'🥇',min:5000,max:6500,color:'#FFD700'},
+  {name:'Meister',icon:'💎',min:6500,max:9000,color:'#a855f7'},
+  {name:'Elite-Meister',icon:'🌟',min:9000,max:13000,color:'#f7c948'},
+  {name:'⬛ GEHEIM',icon:'⬛',min:13000,max:99999,color:'#1a1a1a'},
+];
+
+const GOLD1_XP=4000;
+const isGold1=()=>state.xp>=GOLD1_XP;
+
+const ALL_ACHIEVEMENTS=[
+  {id:'first_task',name:'Erste Schritte',icon:'🌱',desc:'Ersten Task erledigt',xp:10},
+  {id:'tasks5',name:'Anfänger',icon:'👣',desc:'5 Tasks erledigt',xp:25},
+  {id:'tasks10',name:'Macher',icon:'💪',desc:'10 Tasks erledigt',xp:50},
+  {id:'tasks50',name:'Produktiv',icon:'🚀',desc:'50 Tasks erledigt',xp:200},
+  {id:'tasks100',name:'Legende',icon:'👑',desc:'100 Tasks erledigt',xp:500},
+  {id:'streak3',name:'3er Streak',icon:'🔥',desc:'3 Tage aktiv',xp:30},
+  {id:'streak7',name:'Wochenkrieger',icon:'⚡',desc:'7 Tage Streak',xp:70},
+  {id:'streak30',name:'Disziplin',icon:'🏅',desc:'30 Tage Streak',xp:300},
+  {id:'speedrun',name:'Speedrunner',icon:'💨',desc:'5 Tasks an einem Tag',xp:40},
+  {id:'allDepts',name:'Allrounder',icon:'🌟',desc:'In allen Bereichen aktiv',xp:60},
+  {id:'vehicle1',name:'Autofahrer',icon:'🚗',desc:'Fahrzeug hinzugefügt',xp:20},
+  {id:'gold1',name:'Gold Status',icon:'🥇',desc:'Gold 1 erreicht',xp:400},
+  {id:'discipline',name:'Disziplin',icon:'🎖️',desc:'14 Tage Streak',xp:150},
+  {id:'collector',name:'Sammler',icon:'📦',desc:'5 Achievements',xp:100},
+  {id:'house2',name:'Eigenheim',icon:'🏠',desc:'Haus gewechselt',xp:30},
+];
+
+// ===== HOUSES =====
+const HOUSES=[
+  {id:'cardboard',name:'Karton-Haus',icon:'📦',desc:'Humble Beginnings',locked:false},
+  {id:'normal',name:'Normales Haus',icon:'🏠',desc:'Gemütlich & solide',locked:false},
+  {id:'farm',name:'Bauernhof',icon:'🏡',desc:'Landleben pur',locked:false},
+  {id:'city',name:'Stadthaus',icon:'🏘️',desc:'Urban & modern',locked:false},
+  {id:'villa',name:'Villa',icon:'🏰',desc:'Luxus pur',locked:true,reqXp:GOLD1_XP,reqName:'Gold 1'},
+  {id:'penthouse',name:'Penthouse',icon:'🏙️',desc:'Wolkenkratzer Traum',locked:true,reqXp:GOLD1_XP,reqName:'Gold 1'},
+];
+
+const VEHICLE_TYPES=[
+  {id:'car',icon:'🚗',name:'Auto (Standard)'},
+  {id:'bike',icon:'🚲',name:'Fahrrad'},
+  {id:'moto',icon:'🏍️',name:'Motorrad'},
+  {id:'van',icon:'🚐',name:'Van'},
+  {id:'tractor',icon:'🚜',name:'Traktor'},
+  {id:'sports',icon:'🏎️',name:'Sportwagen',locked:true,reqXp:GOLD1_XP},
+  {id:'plane',icon:'✈️',name:'Flugzeug',locked:true,reqXp:GOLD1_XP},
+];
+
+// ===== STARS =====
+(function(){
+  const bg=document.getElementById('bg-stars');
+  for(let i=0;i<55;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2+.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*4}s;animation-duration:${1.5+Math.random()*3}s;`;
+    bg.appendChild(s);
+  }
+  const intro=document.getElementById('intro-screen');
+  for(let i=0;i<80;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2.5+.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*4}s;animation-duration:${1.5+Math.random()*3}s;`;
+    intro.appendChild(s);
+  }
+})();
+
+// ===== SETUP FLOW =====
+function startSetup(){
+  const is=document.getElementById('intro-screen');
+  is.style.transition='opacity .5s';is.style.opacity='0';
+  setTimeout(()=>{is.style.display='none';document.getElementById('setup-screen').style.display='flex';renderSetupAvatar();},500);
+}
+
+function goStep(n){
+  if(n===2){
+    const nm=document.getElementById('player-name-input').value.trim();
+    if(!nm){document.getElementById('player-name-input').style.borderColor='var(--red)';return;}
+    state.playerName=nm;
+  }
+  if(n===5) buildStep5();
+  document.getElementById(`step${setupStep}`).classList.remove('active');
+  setupStep=n;
+  document.getElementById(`step${n}`).classList.add('active');
+  document.getElementById('setup-step-label').textContent=`SCHRITT ${n} VON 5`;
+  for(let i=1;i<=5;i++){
+    const d=document.getElementById(`pd${i}`);d.className='prog-dot';
+    if(i<n)d.classList.add('done');else if(i===n)d.classList.add('active');
+  }
+}
+
+let curHair='long',curHeight='medium',curBodySize=3,curVehicle='car',curHouse='normal';
+
+function selHair(t,btn){curHair=t;document.querySelectorAll('#step2 .grid-3:nth-child(2) .option-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');renderSetupAvatar();}
+function selHeight(t,btn){curHeight=t;document.querySelectorAll('#step2 .grid-3:nth-child(4) .option-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');renderSetupAvatar();}
+function selVehicle(t,btn){curVehicle=t;document.querySelectorAll('#step3 .grid-3:nth-child(2) .option-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+function selHouse(t,btn){curHouse=t;document.querySelectorAll('#step3 .grid-3:nth-child(6) .option-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+
+function updateBodySlider(v){
+  curBodySize=parseInt(v);
+  const labels=['Sehr schlank','Schlank','Normal','Kräftig','Sehr kräftig'];
+  const hints=['Ernährungstipps: Mehr Kalorien & Proteine','Ernährung: Aufbaukost empfohlen','Ausgewogene Ernährung passend','Ernährung: Kaloriendefizit Tipps','Ernährung: Intensiv-Diät & Sport'];
+  document.getElementById('body-label').textContent=labels[v-1];
+  document.getElementById('body-hint').textContent='💡 '+hints[v-1];
+  renderSetupAvatar();
+}
+
+function toggleGoal(id,el){
+  if(el.classList.contains('selected')){el.classList.remove('selected');selectedGoals=selectedGoals.filter(g=>g!==id);}
+  else{el.classList.add('selected');selectedGoals.push(id);}
+}
+
+function buildStep5(){
+  state.hairStyle=curHair;state.heightType=curHeight;state.bodySize=curBodySize;
+  state.vehicleType=curVehicle;state.houseType=curHouse;state.goals=selectedGoals;
+
+  const goalNames={fitness:'Gesünder leben',money:'Finanzen ordnen',career:'Karriere aufbauen',skills:'Skills entwickeln',home:'Zuhause pflegen',balance:'Work-Life-Balance',travel:'Reisen & Erleben',social:'Soziales Leben',creative:'Kreativ sein'};
+  const gs=selectedGoals.length?selectedGoals.map(g=>`<strong>${goalNames[g]||g}</strong>`).join(', '):'Allgemeine Lebensoptimierung';
+  document.getElementById('goal-summary').innerHTML=`🤖 Dein AI-Agent fokussiert sich auf: ${gs}`;
+
+  const starters=getStarterTasks();
+  document.getElementById('starter-tasks').innerHTML=starters.map(t=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:9px;margin-bottom:6px;">
+      <span style="font-size:16px;">${{person:'👤',skill:'🌳',vehicle:'🚗',home:'🏠'}[t.dept]||'📋'}</span>
+      <span style="font-size:12px;font-weight:700;flex:1;">${t.name}</span>
+      <span style="font-size:10px;color:var(--accent);">+10 XP</span>
+    </div>`).join('');
+}
+
+function getStarterTasks(){
+  const base=[{name:'Profil vervollständigen',dept:'person'},{name:'Ersten Skill anlegen',dept:'skill'}];
+  if(selectedGoals.includes('fitness')) base.push({name:'Sport planen',dept:'skill'});
+  if(selectedGoals.includes('money')) base.push({name:'Budget überblicken',dept:'person'});
+  if(selectedGoals.includes('home')) base.push({name:'Einkaufsliste erstellen',dept:'home'});
+  if(selectedGoals.includes('career')) base.push({name:'Karriereziel setzen',dept:'person'});
+  base.push({name:'Fahrzeug registrieren',dept:'vehicle'});
+  return base;
+}
+
+function renderSetupAvatar(){
+  const hair={
+    long:`<path d="M17 22 Q17 4 35 3 Q53 4 53 22" fill="#8B4513"/><path d="M17 22 Q14 32 16 42 Q17 46 20 43" fill="#8B4513"/><path d="M53 22 Q56 32 54 42 Q53 46 50 43" fill="#8B4513"/>`,
+    short:`<path d="M17 22 Q17 4 35 3 Q53 4 53 22 Q50 10 35 9 Q20 10 17 22Z" fill="#5a3210"/>`,
+    bald:`<circle cx="35" cy="18" r="8" fill="#e8c9a0" opacity=".3"/>`
+  };
+  const scale=curHeight==='small'?.85:curHeight==='tall'?1.1:1;
+  const bodyW=16+curBodySize*3;
+  document.getElementById('avatar-preview-setup').innerHTML=`
+    <svg width="${Math.round(70*scale)}" height="${Math.round(95*scale)}" viewBox="0 0 70 95" fill="none">
+      <ellipse cx="35" cy="93" rx="18" ry="4" fill="rgba(0,0,0,.3)"/>
+      <rect x="22" y="62" width="12" height="28" rx="4" fill="#1e40af"/>
+      <rect x="36" y="62" width="12" height="28" rx="4" fill="#1e40af"/>
+      <ellipse cx="28" cy="91" rx="8" ry="3.5" fill="#1a1a1a"/>
+      <ellipse cx="42" cy="91" rx="8" ry="3.5" fill="#1a1a1a"/>
+      <rect x="${35-bodyW/2}" y="35" width="${bodyW}" height="30" rx="6" fill="#f0f0f0"/>
+      <rect x="7" y="36" width="12" height="22" rx="5" fill="#f0d0b0"/>
+      <rect x="51" y="36" width="12" height="22" rx="5" fill="#f0d0b0"/>
+      <rect x="28" y="26" width="14" height="12" rx="5" fill="#f0d0b0"/>
+      <circle cx="35" cy="22" r="18" fill="#f0d0b0"/>
+      ${hair[curHair]||hair.long}
+      <circle cx="28" cy="20" r="2.5" fill="#2d1a0e"/>
+      <circle cx="42" cy="20" r="2.5" fill="#2d1a0e"/>
+      <circle cx="29" cy="19" r="1" fill="white"/>
+      <circle cx="43" cy="19" r="1" fill="white"/>
+      <path d="M29 27 Q35 32 41 27" fill="none" stroke="#c0906a" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+}
+
+function selVType(t,btn){
+  selVTypeVal=t;
+  document.querySelectorAll('#v-type-grid .option-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const locked=['sports','plane'];
+  document.getElementById('v-locked-warning').style.display=locked.includes(t)&&!isGold1()?'block':'none';
+}
+
+function finishSetup(){
+  getStarterTasks().forEach(t=>addTaskData(t));
+  // Add first vehicle
+  state.vehicles=[{id:1,make:'Mein',model:VEHICLE_TYPES.find(v=>v.id===state.vehicleType)?.name||'Fahrzeug',type:state.vehicleType,active:true}];
+  state.activeVehicleId=1;
+  document.getElementById('setup-screen').style.display='none';
+  launchApp();
+}
+
+// ===== APP LAUNCH =====
+function launchApp(){
+  document.getElementById('main-app').style.display='flex';
+  document.getElementById('bottom-nav').style.display='flex';
+  document.getElementById('fab-btn').style.display='flex';
+  document.getElementById('display-name').textContent=state.playerName.toUpperCase();
+  document.getElementById('avatar-name-label').textContent=`👤 ${state.playerName.toUpperCase()}`;
+  updateAvatar();updateVehicleScene();updateHouseScene();updateUI();updateLevelDisplay();
+  setTimeout(()=>showBubble(`Hey ${state.playerName}! 👋 Ready to level up?`),1200);
+  setInterval(maybeAiSuggest,35000);
+}
+
+// ===== AVATAR =====
+function updateAvatar(){
+  const hair={
+    long:`<path d="M17 22 Q17 4 35 3 Q53 4 53 22" fill="#8B4513"/><path d="M17 22 Q14 32 16 42 Q17 46 20 43" fill="#8B4513"/><path d="M53 22 Q56 32 54 42 Q53 46 50 43" fill="#8B4513"/>`,
+    short:`<path d="M17 22 Q17 4 35 3 Q53 4 53 22 Q50 10 35 9 Q20 10 17 22Z" fill="#5a3210"/>`,
+    bald:`<circle cx="35" cy="18" r="8" fill="#e8c9a0" opacity=".3"/>`
+  };
+  document.getElementById('avatar-hair').innerHTML=hair[state.hairStyle]||hair.long;
+}
+
+// ===== VEHICLE SCENE =====
+function updateVehicleScene(){
+  const av=state.vehicles.find(v=>v.active)||state.vehicles[0];
+  const vtype=av?av.type:state.vehicleType;
+  const vname=av?`${av.make} ${av.model}`:VEHICLE_TYPES.find(v=>v.id===vtype)?.name||'Auto';
+  document.getElementById('vehicle-scene-label').textContent=VEHICLE_TYPES.find(v=>v.id===vtype)?.icon||'🚗'+' '+vname.substring(0,8);
+  const g=document.getElementById('vehicle-graphic');
+  const vSvgs={
+    car:`<rect x="5" y="34" width="90" height="20" rx="6" fill="#2563eb"/><path d="M20 34 Q28 18 48 17 Q68 18 76 34Z" fill="#3b82f6"/><path d="M26 33 Q33 20 48 19 Q63 20 70 33Z" fill="#7ecfff" opacity=".7"/><circle cx="20" cy="55" r="10" fill="#1a1a1a"/><circle cx="20" cy="55" r="5" fill="#555"/><circle cx="78" cy="55" r="10" fill="#1a1a1a"/><circle cx="78" cy="55" r="5" fill="#555"/><ellipse cx="89" cy="39" rx="5" ry="4" fill="#fff9c4" opacity=".8"/><rect x="5" y="36" width="6" height="7" rx="2" fill="#ff4444" opacity=".8"/>`,
+    sports:`<rect x="3" y="36" width="94" height="18" rx="5" fill="#c0392b"/><path d="M18 36 Q28 16 50 15 Q72 16 82 36Z" fill="#e74c3c"/><path d="M24 35 Q32 19 50 18 Q68 19 76 35Z" fill="#7ecfff" opacity=".7"/><circle cx="18" cy="55" r="11" fill="#1a1a1a"/><circle cx="18" cy="55" r="6" fill="#555"/><circle cx="18" cy="55" r="3" fill="#888"/><circle cx="80" cy="55" r="11" fill="#1a1a1a"/><circle cx="80" cy="55" r="6" fill="#555"/><circle cx="80" cy="55" r="3" fill="#888"/><ellipse cx="92" cy="40" rx="5" ry="4" fill="#fff9c4"/><line x1="18" y1="46" x2="82" y2="46" stroke="rgba(255,255,255,.2)" stroke-width="2"/>`,
+    bike:`<ellipse cx="22" cy="50" rx="18" ry="18" fill="none" stroke="#1a1a1a" stroke-width="4"/><ellipse cx="22" cy="50" rx="10" ry="10" fill="none" stroke="#555" stroke-width="2"/><ellipse cx="75" cy="50" rx="18" ry="18" fill="none" stroke="#1a1a1a" stroke-width="4"/><ellipse cx="75" cy="50" rx="10" ry="10" fill="none" stroke="#555" stroke-width="2"/><path d="M22 50 L45 28 L75 50" fill="none" stroke="#333" stroke-width="4"/><path d="M45 28 L58 28" stroke="#333" stroke-width="3"/><rect x="44" y="22" width="16" height="4" rx="2" fill="#333"/>`,
+    moto:`<rect x="20" y="32" width="60" height="16" rx="5" fill="#1a1a1a"/><path d="M50 20 Q65 20 72 34" fill="none" stroke="#333" stroke-width="6"/><ellipse cx="22" cy="52" rx="14" ry="14" fill="none" stroke="#1a1a1a" stroke-width="4"/><ellipse cx="22" cy="52" rx="7" ry="7" fill="none" stroke="#555" stroke-width="2"/><ellipse cx="76" cy="52" rx="14" ry="14" fill="none" stroke="#1a1a1a" stroke-width="4"/><ellipse cx="76" cy="52" rx="7" ry="7" fill="none" stroke="#555" stroke-width="2"/><rect x="44" y="18" width="14" height="5" rx="2" fill="#555"/>`,
+    van:`<rect x="5" y="16" width="90" height="44" rx="5" fill="#1e40af"/><rect x="8" y="20" width="24" height="16" rx="2" fill="#7ecfff" opacity=".7"/><rect x="38" y="20" width="18" height="16" rx="2" fill="#7ecfff" opacity=".7"/><rect x="62" y="20" width="18" height="22" rx="2" fill="#7ecfff" opacity=".7"/><circle cx="22" cy="62" r="10" fill="#1a1a1a"/><circle cx="22" cy="62" r="5" fill="#555"/><circle cx="76" cy="62" r="10" fill="#1a1a1a"/><circle cx="76" cy="62" r="5" fill="#555"/>`,
+    tractor:`<rect x="25" y="30" width="60" height="28" rx="4" fill="#16a34a"/><path d="M30 30 Q38 14 55 13 Q65 14 68 30Z" fill="#22c55e"/><path d="M34 29 Q40 18 55 17 Q64 18 66 29Z" fill="#86efac" opacity=".5"/><ellipse cx="32" cy="58" rx="20" ry="20" fill="#1a1a1a"/><ellipse cx="32" cy="58" rx="12" ry="12" fill="#555"/><ellipse cx="32" cy="58" rx="6" ry="6" fill="#888"/><ellipse cx="80" cy="62" rx="12" ry="12" fill="#1a1a1a"/><ellipse cx="80" cy="62" rx="6" ry="6" fill="#555"/>`,
+    plane:`<ellipse cx="50" cy="40" rx="42" ry="10" fill="#93c5fd"/><path d="M8 40 Q30 28 55 28 Q75 28 90 40" fill="#bfdbfe"/><rect x="42" y="20" width="14" height="24" rx="5" fill="#93c5fd"/><path d="M15 43 Q20 55 30 58 L50 55 L70 58 Q80 55 85 43" fill="#bfdbfe"/><ellipse cx="90" cy="40" rx="8" ry="5" fill="#fff" opacity=".6"/>`,
+  };
+  g.innerHTML=vSvgs[vtype]||vSvgs.car;
+}
+
+// ===== HOUSE SCENE =====
+function updateHouseScene(){
+  const htype=state.houseType;
+  const el=document.getElementById('house-svg-main');
+  const label=document.getElementById('house-scene-label');
+  const houseData={
+    normal:{svg:`<rect x="10" y="45" width="70" height="42" rx="3" fill="#2a3f6e"/><polygon points="45,5 5,48 85,48" fill="#c0392b"/><rect x="32" y="62" width="16" height="24" rx="2" fill="#8B4513"/><circle cx="44" cy="75" r="2" fill="#f7c948"/><rect x="14" y="52" width="16" height="14" rx="2" fill="#7ecfff" opacity=".7"/><rect x="60" y="52" width="16" height="14" rx="2" fill="#7ecfff" opacity=".7"/><rect x="60" y="15" width="10" height="20" fill="#8B4513"/>`,label:'🏠 HAUS'},
+    cardboard:{svg:`<rect x="12" y="48" width="66" height="38" rx="2" fill="#c8a45a"/><polygon points="45,10 8,50 82,50" fill="#a0784a"/><rect x="32" y="62" width="14" height="24" rx="1" fill="#7a5530"/><line x1="12" y1="60" x2="78" y2="60" stroke="#8a6a3a" stroke-width="2" stroke-dasharray="4"/><line x1="12" y1="72" x2="78" y2="72" stroke="#8a6a3a" stroke-width="2" stroke-dasharray="4"/><text x="38" y="58" fill="#6a4a20" font-size="9" font-family="Arial">📦</text>`,label:'📦 KARTON'},
+    farm:{svg:`<rect x="8" y="46" width="74" height="40" rx="2" fill="#8B4513"/><polygon points="45,5 3,48 87,48" fill="#8B0000"/><rect x="30" y="62" width="16" height="24" rx="2" fill="#5a3510"/><rect x="14" y="52" width="14" height="12" rx="2" fill="#f7d070" opacity=".7"/><rect x="62" y="52" width="14" height="12" rx="2" fill="#f7d070" opacity=".7"/><rect x="55" y="12" width="12" height="28" fill="#7B3A10"/>`,label:'🏡 FARM'},
+    city:{svg:`<rect x="10" y="30" width="70" height="56" rx="3" fill="#374151"/><rect x="18" y="38" width="12" height="10" rx="1" fill="#7ecfff" opacity=".7"/><rect x="36" y="38" width="12" height="10" rx="1" fill="#7ecfff" opacity=".7"/><rect x="54" y="38" width="12" height="10" rx="1" fill="#7ecfff" opacity=".7"/><rect x="18" y="56" width="12" height="10" rx="1" fill="#7ecfff" opacity=".7"/><rect x="36" y="56" width="12" height="10" rx="1" fill="#f7c948" opacity=".7"/><rect x="54" y="56" width="12" height="10" rx="1" fill="#7ecfff" opacity=".7"/><rect x="34" y="70" width="12" height="16" rx="2" fill="#5a3510"/><rect x="20" y="22" width="4" height="14" fill="#555"/>`,label:'🏘️ CITY'},
+    villa:{svg:`<rect x="5" y="42" width="80" height="44" rx="3" fill="#e5d5b0"/><polygon points="45,5 2,44 88,44" fill="#c0a060"/><rect x="33" y="62" width="14" height="24" rx="2" fill="#5a3510"/><rect x="12" y="50" width="16" height="14" rx="2" fill="#7ecfff" opacity=".8"/><rect x="62" y="50" width="16" height="14" rx="2" fill="#7ecfff" opacity=".8"/><ellipse cx="40" cy="74" r="2" fill="#f7c948"/><path d="M25 86 Q45 78 65 86" fill="none" stroke="#c0a060" stroke-width="2"/>`,label:'🏰 VILLA'},
+    penthouse:{svg:`<rect x="6" y="10" width="78" height="76" rx="3" fill="#1e293b"/><rect x="14" y="18" width="18" height="14" rx="1" fill="#7ecfff" opacity=".7"/><rect x="38" y="18" width="18" height="14" rx="1" fill="#7ecfff" opacity=".7"/><rect x="62" y="18" width="14" height="14" rx="1" fill="#7ecfff" opacity=".7"/><rect x="14" y="40" width="18" height="14" rx="1" fill="#f7c948" opacity=".6"/><rect x="38" y="40" width="18" height="14" rx="1" fill="#7ecfff" opacity=".7"/><rect x="62" y="40" width="14" height="14" rx="1" fill="#7ecfff" opacity=".7"/><rect x="30" y="68" width="18" height="18" rx="2" fill="#5a3510"/><rect x="40" y="5" width="6" height="10" fill="#3b82f6"/>`,label:'🏙️ PENTHOUSE'},
+  };
+  const hd=houseData[htype]||houseData.normal;
+  el.innerHTML=hd.svg;
+  label.textContent=hd.label;
+}
+
+// ===== SPEECH BUBBLE =====
+function showBubble(txt){
+  const b=document.getElementById('speech-bubble');
+  b.textContent=txt;b.classList.add('visible');
+  setTimeout(()=>b.classList.remove('visible'),4500);
+}
+
+// ===== SCENE TAP =====
+function handleSceneTap(type,e){
+  e.stopPropagation();
+  clearTapInfo();
+  if(type==='house'){
+    const infos={
+      normal:'🏠 Dein Zuhause\nTasks: Einkauf, Reparaturen, Reinigung...',
+      cardboard:'📦 Humble Start!\nTasks: Upgrade ansparen...',
+      farm:'🏡 Bauernhof\nTasks: Ernte, Tiere, Wartung...',
+      city:'🏘️ Stadtleben\nTasks: Miete, Nachbarn...',
+      villa:'🏰 Villa\nTasks: Personal, Garten, Pool...',
+      penthouse:'🏙️ Luxusleben\nTasks: Concierge, Hausverwaltung...'
+    };
+    showTapInfo(infos[state.houseType]||'🏠 Dein Zuhause',e,'house');
+    setTimeout(()=>openDept('house'),800);
+  } else {
+    const av=state.vehicles.find(v=>v.active)||state.vehicles[0];
+    const name=av?`${av.make} ${av.model}`:'Fahrzeug';
+    const vt=VEHICLE_TYPES.find(v=>v.id===(av?av.type:state.vehicleType));
+    showTapInfo(`${vt?.icon||'🚗'} ${name}\nTipps & Wartung`,e,'vehicle');
+    setTimeout(()=>openDept('vehicle'),800);
+  }
+}
+
+function showTapInfo(text,e,type){
+  clearTapInfo();
+  const ti=document.createElement('div');ti.className='tap-info';ti.id='active-tap-info';
+  ti.textContent=text;
+  const scene=document.getElementById('main-scene');
+  const rect=scene.getBoundingClientRect();
+  if(type==='house'){ti.style.left='2%';ti.style.top='8px';}
+  else{ti.style.right='2%';ti.style.top='8px';}
+  scene.appendChild(ti);
+  tapInfoTimer=setTimeout(clearTapInfo,2500);
+}
+function clearTapInfo(){
+  clearTimeout(tapInfoTimer);
+  const old=document.getElementById('active-tap-info');if(old)old.remove();
+}
+
+// ===== TASKS =====
+function addTaskData(d){
+  const t={id:state.taskId++,name:d.name||'Task',dept:d.dept||'home',priority:d.priority||'med',repeat:d.repeat||'none',dueDate:d.dueDate||null,done:false,skipCount:0,suspended:false,createdAt:Date.now()};
+  state.tasks.push(t);return t;
+}
+
+function addTask(){
+  const nm=document.getElementById('new-task-name').value.trim();
+  if(!nm){document.getElementById('new-task-name').style.borderColor='var(--red)';return;}
+  addTaskData({name:nm,dept:document.getElementById('new-task-dept').value,priority:document.getElementById('new-task-priority').value,repeat:document.getElementById('new-task-repeat').value,dueDate:document.getElementById('new-task-date').value||null});
+  document.getElementById('new-task-name').value='';document.getElementById('new-task-date').value='';
+  closeModal('modal-add-task');state.xp+=5;updateLevelDisplay();updateUI();
+  showXpPopup('+5 XP',document.getElementById('fab-btn'));
+  showBubble('Super! Task hinzugefügt! 💪');
+  setTimeout(maybeAiSuggest,2000);
+}
+
+function completeTask(id){
+  const t=state.tasks.find(x=>x.id===id);if(!t||t.done)return;
+  t.done=true;completedCount++;state.tasksToday++;state.xp+=20;
+  state.xpHistory.push({date:new Date().toLocaleDateString(),xp:20,task:t.name});
+  const today=new Date().toDateString();
+  if(state.lastDate!==today){state.streak++;state.lastDate=today;}
+  if(t.repeat!=='none')setTimeout(()=>{t.done=false;updateUI();},2000);
+  updateLevelDisplay();updateUI();triggerEffect();checkAchievements();
+  document.getElementById('streak-count').textContent=state.streak;
+  const msgs=['🔥 Perfekt!','⚡ Weiter so!','🌟 Ausgezeichnet!','💪 Stark!','🚀 Unstoppable!',`🔥 ${state.tasksToday} heute!`];
+  showBubble(msgs[Math.floor(Math.random()*msgs.length)]);
+  const el=document.querySelector(`[data-task-id="${id}"]`);
+  if(el)showXpPopup('+20 XP ⚡',el);
+}
+
+function skipTask(id){
+  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  t.skipCount=(t.skipCount||0)+1;
+  if(t.skipCount===1){t.suspended=true;t.suspendedUntil=Date.now()+72*3600*1000;showBubble('72h zurückgestellt 😴');}
+  else{openTaskDetail(id,true);showBubble('Bitte neue Frist setzen! 📅');}
+  updateUI();
+}
+
+function deleteTask(id){state.tasks=state.tasks.filter(t=>t.id!==id);updateUI();}
+
+function getActiveTasks(){
+  const now=Date.now();
+  return state.tasks.filter(t=>{
+    if(t.suspended&&t.suspendedUntil>now)return false;
+    if(t.suspended){t.suspended=false;}
+    return true;
+  }).sort((a,b)=>{
+    if(a.done!==b.done)return a.done?1:-1;
+    const p={high:0,med:1,low:2};
+    return (p[a.priority]||1)-(p[b.priority]||1);
+  });
+}
+
+function renderTaskItem(t){
+  const dc={home:'dept-house',vehicle:'dept-car',person:'dept-person',skill:'dept-skill'};
+  const dl={home:'🏠',vehicle:'🚗',person:'👤',skill:'🌳'};
+  const today=new Date().toISOString().split('T')[0];
+  const ov=t.dueDate&&t.dueDate<today&&!t.done;
+  return `<div class="task-item" data-task-id="${t.id}" onclick="openTaskDetail(${t.id})">
+    <div class="task-check ${t.done?'done':''}" onclick="event.stopPropagation();completeTask(${t.id})">${t.done?'✓':''}</div>
+    <div class="task-info">
+      <div class="task-name ${t.done?'done':''}">${t.name}</div>
+      <div class="task-meta">
+        <span class="task-dept ${dc[t.dept]||'dept-house'}">${dl[t.dept]||'🏠'}</span>
+        ${t.dueDate?`<span class="${ov?'reminder-badge':''}">📅 ${t.dueDate}</span>`:''}
+        ${t.repeat!=='none'?'<span>🔄</span>':''}
+      </div>
+    </div>
+    <div class="task-priority priority-${t.priority}"></div>
+    ${!t.done?`<div class="task-skip-btn" onclick="event.stopPropagation();skipTask(${t.id})">⏭</div>`:''}
+  </div>`;
+}
+
+// ===== UI UPDATE =====
+function updateUI(){
+  const active=getActiveTasks().filter(t=>!t.done);
+  const done=state.tasks.filter(t=>t.done);
+  document.getElementById('tasks-count-badge').textContent=active.length;
+  document.getElementById('tasks-done-count').textContent=`${done.length}/${state.tasks.length}`;
+  renderMainTasks();renderSteps();
+  if(state.currentPage==='house')renderHousePage();
+  if(state.currentPage==='vehicle')renderVehiclePage();
+  if(state.currentPage==='person')renderPersonPage();
+  if(state.currentPage==='calendar')renderCalendar();
+}
+
+function renderMainTasks(){
+  const tasks=getActiveTasks();
+  const el=document.getElementById('main-task-list');
+  if(!tasks.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-text">Alle Tasks erledigt! Champion!</div></div>`;return;}
+  el.innerHTML=tasks.slice(0,7).map(t=>renderTaskItem(t)).join('');
+}
+
+function renderSteps(){
+  const row=document.getElementById('steps-row');
+  const tasks=getActiveTasks().filter(t=>!t.done).slice(0,8);
+  const icons={home:'🏠',vehicle:'🚗',person:'👤',skill:'🌳'};
+  if(!tasks.length){row.innerHTML=`<div style="color:var(--text2);font-size:12px;font-weight:700;padding:8px 0;">🎉 Alle erledigt!</div>`;return;}
+  row.innerHTML=tasks.map((t,i)=>{
+    const short=t.name.length>10?t.name.substring(0,9)+'…':t.name;
+    return `${i>0?'<div style="width:14px;height:2px;background:var(--border);align-self:center;flex-shrink:0;border-radius:1px;"></div>':''}
+    <div class="step-bubble ${i===0?'active':''}" onclick="openTaskDetail(${t.id})">
+      <span class="step-icon">${icons[t.dept]||'📋'}</span>
+      <span class="step-short">${short}</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== PAGES =====
+function renderHousePage(){
+  const tasksEl=document.getElementById('house-tasks-tab');
+  const tasks=state.tasks.filter(t=>t.dept==='home');
+  tasksEl.innerHTML=`<button class="add-btn" style="width:100%;margin-bottom:12px;" onclick="openAddTaskFor('home')">✚ TASK</button>${tasks.length?tasks.map(t=>renderTaskItem(t)).join(''):'<div class="empty-state"><div class="empty-icon">🏠</div><div class="empty-text">Noch keine Haus-Tasks</div></div>'}`;
+  const gallEl=document.getElementById('house-gallery-tab');
+  gallEl.innerHTML=`<div style="margin-bottom:12px;font-size:12px;color:var(--text2);font-weight:700;">Tippe auf ein Haus um es zu wählen</div>`+HOUSES.map(h=>{
+    const isActive=state.houseType===h.id;
+    const locked=h.locked&&!isGold1();
+    return `<div class="house-card ${isActive?'active-house':''}" onclick="${locked?'showLockInfo()':(`setHouse('${h.id}')`)}">
+      <div class="house-card-row">
+        <span class="house-icon-big">${h.icon}</span>
+        <div style="flex:1;"><div style="font-family:'Bangers',cursive;font-size:17px;letter-spacing:1px;">${h.name}</div><div style="font-size:11px;color:var(--text2);">${h.desc}</div></div>
+        ${isActive?'<span style="font-size:11px;font-weight:800;color:var(--accent3);background:rgba(78,205,196,.15);padding:3px 10px;border-radius:8px;">AKTIV</span>':''}
+      </div>
+      ${locked?`<div class="house-locked-overlay"><span style="font-size:20px;">🔒</span><span style="font-size:10px;color:var(--accent);font-weight:800;letter-spacing:1px;">AB ${h.reqName}</span></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function setHouse(id){
+  state.houseType=id;updateHouseScene();updateUI();
+  unlockAchievement('house2');
+  showBubble(`${HOUSES.find(h=>h.id===id)?.icon} Neues Zuhause! 🎉`);
+}
+
+function renderVehiclePage(){
+  const tasksEl=document.getElementById('vehicle-tasks-tab');
+  const tasks=state.tasks.filter(t=>t.dept==='vehicle');
+  tasksEl.innerHTML=`<button class="add-btn" style="width:100%;margin-bottom:12px;" onclick="openAddTaskFor('vehicle')">✚ TASK</button>${tasks.length?tasks.map(t=>renderTaskItem(t)).join(''):'<div class="empty-state"><div class="empty-icon">🚗</div><div class="empty-text">Noch keine Fahrzeug-Tasks</div></div>'}`;
+  const garEl=document.getElementById('vehicle-garage-tab');
+  garEl.innerHTML=`<div class="garage-header"><div style="font-size:12px;color:var(--text2);font-weight:700;">${state.vehicles.length} FAHRZEUG(E)</div></div>`+
+  state.vehicles.map(v=>{
+    const vt=VEHICLE_TYPES.find(x=>x.id===v.type);
+    return `<div class="vehicle-card ${v.active?'active-vehicle':''}" onclick="setActiveVehicle(${v.id})">
+      ${v.active?'<div class="vehicle-active-badge">AKTIV</div>':''}
+      <div class="vehicle-card-row">
+        <span class="vehicle-icon-big">${vt?.icon||'🚗'}</span>
+        <div class="vehicle-info"><div class="vehicle-name">${v.make} ${v.model}</div><div class="vehicle-sub">${vt?.name||'Fahrzeug'}</div></div>
+      </div>
+    </div>`;
+  }).join('')+`<div class="add-vehicle-btn" onclick="openModal('modal-add-vehicle')">＋ Fahrzeug / Fahrrad / Flugzeug hinzufügen</div>`;
+}
+
+function setActiveVehicle(id){
+  state.vehicles.forEach(v=>v.active=v.id===id);
+  updateVehicleScene();renderVehiclePage();
+  const v=state.vehicles.find(x=>x.id===id);
+  if(v)showBubble(`${VEHICLE_TYPES.find(t=>t.id===v.type)?.icon||'🚗'} ${v.make} ${v.model} aktiv!`);
+}
+
+function addVehicle(){
+  const make=document.getElementById('v-make').value.trim();
+  const model=document.getElementById('v-model').value.trim();
+  if(!make||!model){return;}
+  const locked=(['sports','plane'].includes(selVTypeVal))&&!isGold1();
+  if(locked){showBubble('🔒 Erst ab Gold 1 freigeschaltet!');return;}
+  const nv={id:state.vehicles.length+1,make,model,type:selVTypeVal,active:false};
+  state.vehicles.push(nv);
+  document.getElementById('v-make').value='';document.getElementById('v-model').value='';
+  closeModal('modal-add-vehicle');renderVehiclePage();
+  unlockAchievement('vehicle1');
+  showBubble(`${VEHICLE_TYPES.find(t=>t.id===selVTypeVal)?.icon||'🚗'} ${make} ${model} hinzugefügt!`);
+}
+
+function renderPersonPage(){
+  const ptab=document.getElementById('person-tasks-tab');
+  const tasks=state.tasks.filter(t=>t.dept==='person'||t.dept==='skill');
+  ptab.innerHTML=`<button class="add-btn" style="width:100%;margin-bottom:12px;" onclick="openAddTaskFor('person')">✚ TASK</button>${tasks.length?tasks.map(t=>renderTaskItem(t)).join(''):'<div class="empty-state"><div class="empty-icon">💪</div><div class="empty-text">Persönliche Tasks anlegen!</div></div>'}`;
+  renderSkillsDiagram();
+  renderPersonStats();
+}
+
+function renderSkillsDiagram(){
+  const skillTab=document.getElementById('person-skills-tab');
+  const skillGroups=[
+    {name:'Sprachen',icon:'🌍',key:'lang',tasks:state.tasks.filter(t=>/(sprach|franz|engl|span|ital|jap|chin)/i.test(t.name)).length},
+    {name:'Fitness',icon:'💪',key:'fit',tasks:state.tasks.filter(t=>/(sport|train|gym|lauf|yoga|fit)/i.test(t.name)).length},
+    {name:'Kreativ',icon:'🎨',key:'cr',tasks:state.tasks.filter(t=>/(musik|gitarr|zeich|malen|krea|foto)/i.test(t.name)).length},
+    {name:'Karriere',icon:'💼',key:'car',tasks:state.tasks.filter(t=>t.dept==='skill').length},
+    {name:'Social',icon:'👥',key:'soc',tasks:state.tasks.filter(t=>/(freund|sozial|event|treffen)/i.test(t.name)).length},
+    {name:'Wissen',icon:'📚',key:'know',tasks:state.tasks.filter(t=>/(lesen|buch|kurs|lernen)/i.test(t.name)).length},
+  ];
+  const max=Math.max(...skillGroups.map(s=>s.tasks),1);
+  // Radar chart via SVG
+  const cx=120,cy=120,r=90,n=skillGroups.length;
+  const getPoint=(i,val)=>{
+    const angle=(i*2*Math.PI/n)-Math.PI/2;
+    const dist=Math.max(12,(val/max)*r);
+    return [cx+dist*Math.cos(angle),cy+dist*Math.sin(angle)];
+  };
+  const getAxis=(i,dist)=>{
+    const angle=(i*2*Math.PI/n)-Math.PI/2;
+    return [cx+dist*Math.cos(angle),cy+dist*Math.sin(angle)];
+  };
+  // Grid circles
+  let gridCircles='';
+  [0.25,0.5,0.75,1].forEach(f=>{gridCircles+=`<circle cx="${cx}" cy="${cy}" r="${r*f}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;});
+  // Axes
+  let axes='';
+  skillGroups.forEach((_,i)=>{const [x,y]=getAxis(i,r);axes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;});
+  // Skill polygon
+  const pts=skillGroups.map((_,i)=>getPoint(i,skillGroups[i].tasks));
+  const polyPts=pts.map(p=>p.join(',')).join(' ');
+  // Labels
+  let labels='';
+  skillGroups.forEach((s,i)=>{
+    const [lx,ly]=getAxis(i,r+16);
+    labels+=`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#8888aa" font-size="9" font-family="Nunito,sans-serif" font-weight="800">${s.icon} ${s.name}</text>`;
+    const [px,py]=getPoint(i,skillGroups[i].tasks);
+    labels+=`<circle cx="${px}" cy="${py}" r="4" fill="var(--accent)"/>`;
+  });
+  const lvlFunc=(n)=>{if(n>=50)return'MEISTER';if(n>=30)return'GOLD';if(n>=20)return'SILBER';if(n>=10)return'BRONZE';if(n>=5)return'HOLZ 2';if(n>=1)return'HOLZ 1';return'—';};
+  skillTab.innerHTML=`
+    <div style="background:var(--card);border-radius:18px;padding:16px;border:1px solid var(--border);margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:12px;text-align:center;">🕸️ SKILL RADAR</div>
+      <svg width="240" height="240" viewBox="0 0 240 240" style="display:block;margin:0 auto;">
+        ${gridCircles}${axes}
+        <polygon points="${polyPts}" fill="rgba(247,201,72,0.15)" stroke="var(--accent)" stroke-width="2"/>
+        ${labels}
+      </svg>
+    </div>
+    ${skillGroups.map(s=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:12px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer;" onclick="openAddTaskFor('skill')">
+        <span style="font-size:22px;">${s.icon}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:800;">${s.name}</div>
+          <div style="height:5px;background:var(--card2);border-radius:3px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${Math.min(s.tasks*10,100)}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;"></div></div>
+        </div>
+        <div style="font-family:'Bangers',cursive;font-size:13px;color:var(--accent);letter-spacing:1px;">${lvlFunc(s.tasks)}</div>
+        <div style="font-size:10px;color:var(--text2);">${s.tasks} Tasks</div>
+      </div>`).join('')}`;
+}
+
+function renderPersonStats(){
+  const stab=document.getElementById('person-stats-tab');
+  const done=state.tasks.filter(t=>t.done).length;
+  const total=state.tasks.length;
+  stab.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">${done}</div><div class="stat-label">ERLEDIGT</div></div>
+      <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-value">${state.streak}</div><div class="stat-label">STREAK</div></div>
+      <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-value">${state.xp}</div><div class="stat-label">XP</div></div>
+      <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value">${state.achievements.length}</div><div class="stat-label">TROPHÄEN</div></div>
+    </div>
+    ${state.goals.length?`<div style="background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:10px;">🎯 DEINE ZIELE</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${state.goals.map(g=>`<span style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:var(--accent4);padding:4px 10px;border-radius:10px;font-size:11px;font-weight:700;">${g}</span>`).join('')}</div>
+    </div>`:''}
+    <div style="background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:10px;">BEREICHE</div>
+      ${[{d:'home',l:'🏠 Haus',c:'var(--accent3)'},{d:'vehicle',l:'🚗 Auto',c:'var(--accent2)'},{d:'person',l:'👤 Person',c:'var(--accent4)'},{d:'skill',l:'🌳 Skill',c:'var(--accent)'}].map(x=>{
+        const cnt=state.tasks.filter(t=>t.dept===x.d).length;
+        const pct=total?cnt/total*100:0;
+        return `<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-bottom:4px;"><span>${x.l}</span><span>${cnt}</span></div><div style="height:6px;background:var(--card2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${x.c};border-radius:3px;"></div></div></div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ===== CALENDAR =====
+function renderCalendar(){
+  const el=document.getElementById('calendar-view');
+  const wd=state.tasks.filter(t=>t.dueDate).sort((a,b)=>a.dueDate>b.dueDate?1:-1);
+  el.innerHTML=`<button class="add-btn" style="width:100%;margin-bottom:14px;" onclick="openAddTask()">✚ TERMIN / FRIST</button>`+
+  (wd.length?wd.map(t=>`<div class="cal-task" onclick="openTaskDetail(${t.id})"><div class="cal-date">📅 ${t.dueDate}</div><div><div style="font-size:13px;font-weight:700;">${t.name}</div><div style="font-size:10px;color:var(--text2);">${{home:'🏠',vehicle:'🚗',person:'👤',skill:'🌳'}[t.dept]||'Task'}</div></div></div>`).join(''):
+  `<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Fristen</div></div>`);
+}
+
+// ===== TROPHY PAGE =====
+function openTrophyPage(){
+  renderTrophyPage();openModal('modal-trophies');
+}
+
+function renderTrophyPage(){
+  // Level index
+  const li=document.getElementById('level-index-list');
+  li.innerHTML=LEVELS.map(l=>{
+    const done=state.xp>=l.min;
+    const current=state.xp>=l.min&&state.xp<l.max;
+    return `<div class="level-index-row ${current?'current':''} ${done&&!current?'':'locked'}">
+      <div class="level-rank-icon">${l.icon}</div>
+      <div class="level-rank-info">
+        <div class="level-rank-name" style="color:${l.color}">${l.name}</div>
+        <div class="level-rank-xp">${l.min.toLocaleString()} – ${l.max===99999?'∞':l.max.toLocaleString()} XP</div>
+      </div>
+      <span class="level-rank-badge ${current?'badge-current':done?'badge-done':'badge-locked'}">${current?'AKTUELL':done?'✓ ERREICHT':'🔒 GESPERRT'}</span>
+    </div>`;
+  }).join('');
+  // Achievements
+  const ag=document.getElementById('achievement-grid-full');
+  ag.innerHTML=ALL_ACHIEVEMENTS.map(a=>{
+    const earned=state.achievements.includes(a.id);
+    return `<div class="ach-card ${earned?'earned':''}">
+      <div class="ach-icon" style="${!earned?'filter:grayscale(1);opacity:.35':''}">${a.icon}</div>
+      <div class="ach-name">${a.name}</div>
+      <div class="ach-xp">${earned?`+${a.xp} XP gewonnen`:`+${a.xp} XP`}</div>
+    </div>`;
+  }).join('');
+  // XP Stats
+  const xpv=document.getElementById('xp-stats-view');
+  const totalFromTasks=state.tasks.filter(t=>t.done).length*20;
+  xpv.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-value">${state.xp}</div><div class="stat-label">TOTAL XP</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">${state.tasks.filter(t=>t.done).length}</div><div class="stat-label">TASKS XP</div></div>
+      <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value">${state.achievements.length*30}</div><div class="stat-label">TROPHY XP</div></div>
+      <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-value">${state.streak*5}</div><div class="stat-label">STREAK XP</div></div>
+    </div>
+    <div style="background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:10px;">NÄCHSTES LEVEL</div>
+      ${(()=>{
+        let nxt=LEVELS.find(l=>state.xp<l.max&&state.xp>=l.min);
+        if(!nxt)nxt=LEVELS[LEVELS.length-1];
+        const pct=nxt.max===99999?99:Math.min(((state.xp-nxt.min)/(nxt.max-nxt.min))*100,100);
+        return `<div style="font-size:13px;font-weight:800;margin-bottom:8px;">${nxt.icon} ${nxt.name} → ${nxt.max===99999?'MAX':LEVELS[LEVELS.indexOf(nxt)+1]?.name||'MAX'}</div>
+        <div style="height:8px;background:var(--card2);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s;"></div></div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px;">${state.xp} / ${nxt.max===99999?'∞':nxt.max} XP (${Math.round(pct)}%)</div>`;
+      })()}
+    </div>
+    ${state.xpHistory.length?`<div style="background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--border);margin-top:10px;">
+      <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:10px;">LETZTE XP AKTIONEN</div>
+      ${state.xpHistory.slice(-8).reverse().map(h=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;"><span style="color:var(--text2);max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.task}</span><span style="color:var(--green);font-weight:700;">+${h.xp} XP</span></div>`).join('')}
+    </div>`:''}`;
+}
+
+function switchTrophyTab(tab,btn){
+  document.querySelectorAll('#modal-trophies .scroll-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('#modal-trophies .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`trophy-${tab}-tab`).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ===== DEPT MODAL =====
+function openDept(type){
+  if(type==='house')switchPage('house',document.getElementById('nav-house'));
+  else if(type==='vehicle')switchPage('vehicle',document.getElementById('nav-vehicle'));
+  else if(type==='person')switchPage('person',document.getElementById('nav-person'));
+}
+
+// ===== TASK DETAIL =====
+function openTaskDetail(id,forceR=false){
+  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  document.getElementById('task-detail-title').textContent=t.name;
+  const dl={home:'🏠 Haus',vehicle:'🚗 Auto',person:'👤 Person',skill:'🌳 Skill'};
+  const pl={high:'🔴 Hoch',med:'🟡 Mittel',low:'🟢 Niedrig'};
+  const rl={none:'Einmalig',daily:'Täglich',weekly:'Wöchentlich',monthly:'Monatlich'};
+  document.getElementById('task-detail-body').innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+      <span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:800;background:var(--card2);">${dl[t.dept]||'Haus'}</span>
+      <span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:800;background:var(--card2);">${pl[t.priority]}</span>
+      <span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:800;background:var(--card2);">🔄 ${rl[t.repeat]||'Einmalig'}</span>
+    </div>
+    ${t.dueDate?`<div style="background:rgba(247,201,72,.1);border:1px solid var(--border);padding:10px 12px;border-radius:10px;margin-bottom:14px;font-size:12px;font-weight:700;">📅 Frist: ${t.dueDate}</div>`:''}
+    ${forceR?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);padding:10px;border-radius:10px;margin-bottom:12px;color:var(--red);font-size:12px;font-weight:700;">⚠️ Neue Frist setzen:</div><input type="date" class="form-input" id="reschedule-date" style="margin-bottom:10px;"><button class="add-btn" style="margin-bottom:10px;width:100%;" onclick="rescheduleTask(${id})">📅 FRIST SETZEN</button>`:''}
+    ${!t.done?`<button class="add-btn" onclick="completeTask(${id});closeModal('modal-task-detail');" style="margin-bottom:8px;width:100%;background:linear-gradient(135deg,var(--green),#16a34a);">✓ ERLEDIGT!</button>
+    <button onclick="skipTask(${id});closeModal('modal-task-detail');" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text2);padding:11px;border-radius:11px;font-family:'Nunito';font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;">⏭ ÜBERSPRINGEN</button>`:`<div style="text-align:center;padding:14px;color:var(--green);font-family:'Bangers',cursive;font-size:22px;letter-spacing:2px;">✓ ERLEDIGT!</div>`}
+    <button onclick="deleteTask(${id});closeModal('modal-task-detail');" style="width:100%;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:9px;border-radius:10px;font-family:'Nunito';font-size:12px;font-weight:700;cursor:pointer;">🗑 LÖSCHEN</button>`;
+  openModal('modal-task-detail');
+}
+
+function rescheduleTask(id){
+  const t=state.tasks.find(x=>x.id===id);
+  const dt=document.getElementById('reschedule-date')?.value;
+  if(t&&dt){t.dueDate=dt;t.suspended=true;t.suspendedUntil=new Date(dt).getTime();t.skipCount=0;closeModal('modal-task-detail');updateUI();showBubble(`Verschoben auf ${dt} 📅`);}
+}
+
+// ===== AI =====
+const AI_SUGGESTIONS=[
+  {trigger:'home',text:'Du hast einen Haus-Task erledigt — Schrauben für Bauprojekt kaufen?',task:'Schrauben kaufen',dept:'home'},
+  {trigger:'vehicle',text:'Ölwechsel nach 10.000km fällig? Inspektion buchen!',task:'Inspektion buchen',dept:'vehicle'},
+  {trigger:'skill',text:'Täglich 15 Min üben bringt mehr als 1h pro Woche!',task:'Skill täglich üben (15 Min)',dept:'skill'},
+  {trigger:'fitness',text:'Nach dem Einkauf wäre ein kurzer Spaziergang perfekt!',task:'20 Min Spaziergang',dept:'person'},
+];
+let aiSuggIdx=0;
+function maybeAiSuggest(){
+  const last=state.tasks.length?state.tasks[state.tasks.length-1]:null;
+  if(!last||Math.random()<.4)return;
+  const s=AI_SUGGESTIONS.find(x=>x.trigger===last.dept)||AI_SUGGESTIONS[Math.floor(Math.random()*AI_SUGGESTIONS.length)];
+  document.getElementById('ai-suggestion-text').textContent=s.text;
+  document.getElementById('ai-suggestion-area').dataset.idx=AI_SUGGESTIONS.indexOf(s);
+  document.getElementById('ai-suggestion-area').style.display='block';
+  aiSuggIdx=AI_SUGGESTIONS.indexOf(s);
+}
+function addAiSuggestion(){
+  const s=AI_SUGGESTIONS[aiSuggIdx]||AI_SUGGESTIONS[0];
+  addTaskData({name:s.task,dept:s.dept,priority:'med'});
+  document.getElementById('ai-suggestion-area').style.display='none';
+  updateUI();showBubble('AI-Task hinzugefügt! 💡');
+}
+
+// ===== ACHIEVEMENTS =====
+function checkAchievements(){
+  const done=state.tasks.filter(t=>t.done).length;
+  const depts=new Set(state.tasks.filter(t=>t.done).map(t=>t.dept));
+  const checks=[
+    {id:'first_task',c:done>=1},{id:'tasks5',c:done>=5},{id:'tasks10',c:done>=10},
+    {id:'tasks50',c:done>=50},{id:'tasks100',c:done>=100},
+    {id:'streak3',c:state.streak>=3},{id:'streak7',c:state.streak>=7},{id:'streak30',c:state.streak>=30},{id:'discipline',c:state.streak>=14},
+    {id:'speedrun',c:state.tasksToday>=5},{id:'allDepts',c:depts.size>=4},
+    {id:'gold1',c:state.xp>=GOLD1_XP},{id:'collector',c:state.achievements.length>=5},
+  ];
+  checks.forEach(c=>{if(c.c&&!state.achievements.includes(c.id)){unlockAchievement(c.id);}});
+}
+
+function unlockAchievement(id){
+  if(state.achievements.includes(id))return;
+  state.achievements.push(id);
+  const a=ALL_ACHIEVEMENTS.find(x=>x.id===id);
+  if(!a)return;
+  state.xp+=a.xp;updateLevelDisplay();
+  const el=document.createElement('div');
+  el.style.cssText=`position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f7c948,#ff6b35);color:#000;padding:10px 18px;border-radius:14px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;z-index:9999;box-shadow:0 4px 20px rgba(247,201,72,.5);animation:fadeUp .4s ease;display:flex;align-items:center;gap:8px;white-space:nowrap;`;
+  el.innerHTML=`${a.icon} ${a.name.toUpperCase()}! +${a.xp} XP`;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),3000);
+}
+
+// ===== LEVEL DISPLAY =====
+function updateLevelDisplay(){
+  let lvl=LEVELS[0];
+  for(const l of LEVELS)if(state.xp>=l.min)lvl=l;
+  const ni=LEVELS.indexOf(lvl);
+  const nxt=LEVELS[ni+1];
+  const pct=nxt?((state.xp-lvl.min)/(nxt.min-lvl.min))*100:100;
+  document.getElementById('level-display').textContent=`${lvl.icon} ${lvl.name.toUpperCase()}`;
+  document.getElementById('xp-display').textContent=`${state.xp} XP`;
+  document.getElementById('xp-bar').style.width=Math.min(pct,100)+'%';
+  if(state.xp>=GOLD1_XP)showBubble('🥇 GOLD 1! Sportwagen & Villa freigeschaltet!');
+}
+
+// ===== EFFECTS =====
+function triggerEffect(){
+  const overlay=document.getElementById('effect-overlay');
+  overlay.style.display='block';overlay.innerHTML='';
+  const colors=['#f7c948','#ff6b35','#4ecdc4','#a855f7','#22c55e','#ef4444'];
+  for(let i=0;i<28;i++){
+    const c=document.createElement('div');c.className='confetti-piece';
+    c.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${colors[~~(Math.random()*colors.length)]};animation-duration:${1+Math.random()*1}s;animation-delay:${Math.random()*.5}s;width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;`;
+    overlay.appendChild(c);
+  }
+  setTimeout(()=>{overlay.style.display='none';overlay.innerHTML='';},2000);
+  if(state.tasksToday>=5){
+    document.getElementById('fire-effect').style.display='block';
+    setTimeout(()=>document.getElementById('fire-effect').style.display='none',1500);
+    const st=document.getElementById('streak-text');
+    st.textContent=`🔥 ${state.tasksToday} IN FOLGE!`;st.style.display='block';
+    setTimeout(()=>st.style.display='none',1500);
+  }
+  const av=document.querySelector('.scene-avatar');
+  if(av){av.style.transform='translateX(-50%) scale(1.15)';setTimeout(()=>av.style.transform='translateX(-50%) scale(1)',200);}
+}
+
+function showXpPopup(txt,anchor){
+  const p=document.createElement('div');p.className='xp-popup';p.textContent=txt;
+  const r=anchor?anchor.getBoundingClientRect():{top:200,left:150};
+  p.style.cssText=`top:${r.top-20}px;left:${r.left}px;`;
+  document.body.appendChild(p);setTimeout(()=>p.remove(),1500);
+}
+
+// ===== NAVIGATION =====
+function switchPage(pg,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`page-${pg}`).classList.add('active');
+  if(btn)btn.classList.add('active');
+  state.currentPage=pg;
+  if(pg==='house'){renderHousePage();}
+  if(pg==='vehicle'){renderVehiclePage();}
+  if(pg==='person'){renderPersonPage();}
+  if(pg==='calendar'){renderCalendar();}
+}
+function switchHouseTab(t,btn){document.querySelectorAll('#page-house .scroll-section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('#page-house .tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(`house-${t}-tab`).classList.add('active');btn.classList.add('active');}
+function switchVehicleTab(t,btn){document.querySelectorAll('#page-vehicle .scroll-section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('#page-vehicle .tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(`vehicle-${t}-tab`).classList.add('active');btn.classList.add('active');}
+function switchPersonTab(t,btn){document.querySelectorAll('#page-person .scroll-section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('#page-person .tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(`person-${t}-tab`).classList.add('active');btn.classList.add('active');if(t==='skills')renderSkillsDiagram();if(t==='stats')renderPersonStats();}
+
+// ===== MODAL =====
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openAddTask(){openModal('modal-add-task');}
+function openAddTaskFor(dept){document.getElementById('new-task-dept').value=dept;openAddTask();}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ===== VOICE =====
+function toggleVoice(){
+  voiceActive=!voiceActive;
+  const btn=document.getElementById('voice-btn');const st=document.getElementById('voice-status');
+  if(voiceActive){
+    btn.classList.add('recording');st.textContent='🔴 Aufnahme... (simuliert)';
+    const samples=['Kühlschrank Garantie läuft in einem Monat ab','Autowäsche nächsten Samstag','Steuererklärung bis Monatsende','Arzttermin nächste Woche buchen','Öl wechseln lassen'];
+    setTimeout(()=>{
+      if(voiceActive){
+        const r=samples[~~(Math.random()*samples.length)];
+        document.getElementById('new-task-name').value=r;
+        st.textContent=`✅ "${r}"`;voiceActive=false;btn.classList.remove('recording');
+      }
+    },2000);
+  } else {btn.classList.remove('recording');st.textContent='Drücke und spreche...';}
+}
+
+function showLockInfo(){showBubble('🔒 Erst ab Gold 1 (4000 XP) freigeschaltet!');}
+
+// ===== INIT =====
+updateLevelDisplay();
+</script>
+</body>
+</html>
